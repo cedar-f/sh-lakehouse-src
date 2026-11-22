@@ -32,7 +32,7 @@ Backup nằm trong `platform-backups/v3/<UTC_TIMESTAMP>/` theo BACKUP_PREFIX. B�
 
 Restore kiểm checksum trước, phục hồi database, workspace, runtime và Kestra storage. Backup V3 cũ không có runtime.tar.gz vẫn được đọc; các run còn trong workspace được runtime-init chuyển vào volume khi khởi động. File Delta vẫn ở cùng R2 location nên không tải toàn bộ 300 GB về máy mới. Không dùng `docker compose down -v`: thao tác đó xóa metadata local.
 
-Snapshot tạo trước đợt cleanup có thể khôi phục lại ví dụ cũ cùng code tại thời điểm snapshot. Chọn đúng snapshot và rà soát workspace sau khi restore. Thay code ứng dụng không tự thay nội dung một backup đã có.
+Snapshot khôi phục workspace tại thời điểm chụp, gồm cả file mà workspace hiện tại có thể đã xóa. Chọn đúng snapshot và rà soát workspace sau restore. Thay code ứng dụng không thay nội dung một backup đã có.
 
 Đây là script cho single-user Compose mặc định. Nếu bật JupyterHub, cần lưu thêm hai volume `hub_state`, `hub_home` và chạy các lệnh bằng cả hai file compose. Chúng chứa tài khoản/password hash và dữ liệu home, phải lưu như secret.
 

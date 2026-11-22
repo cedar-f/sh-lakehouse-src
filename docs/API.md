@@ -93,7 +93,25 @@ GET /lakehouse/docs/{run_id}/catalog.json
 
 Cùng Jupyter auth. Artifact path bị chặn traversal/secret-named file/profiles.yml; không public thư mục runs bằng web server riêng. UI log giữ 1000 event gần nhất trong browser; dùng paging/artifact cho phần đầy đủ còn được giữ.
 
-## Payload mẫu
+## Gateway: GitHub workspace
+
+Các route dưới `/lakehouse/api/git/` dùng Jupyter auth/XSRF. Không đưa passphrase vào query string, URL hoặc log. Phạm vi là user Jupyter hiện tại; các action không chạy trong runner.
+
+| Method / path | Request / response |
+|---|---|
+| GET status | path relative workspace, mặc định .; trả initialized/branch/head/remote/upstream/name/email và ssh key_exists/public_key/fingerprint/agent_running/key_loaded |
+| POST key | passphrase string; tạo Ed25519 khi chưa có key, không overwrite |
+| POST unlock | passphrase string; nạp key vào agent dùng chung, không lưu passphrase |
+| POST test | remote; kiểm ls-remote, trả readable/empty, không xác nhận write |
+| POST init | path, remote, name, email, branch; init/connect và auto ignore, giữ origin khác/branch khác bằng cách từ chối |
+| POST clone | path đích mới/trống dưới workspace, remote, name, email; clone default branch và tự áp config/ignore |
+| GET preview | path; trả files[{path,size,blocked}], total_bytes và token ràng buộc file/index |
+| POST commit | path, token, files[], message; commit đầu local, không push |
+| POST push | path, confirmation đúng SSH URL; first push không force, đặt upstream |
+
+Remote chỉ nhận GitHub URL không có credential và chuẩn hóa SSH. Clone không overlay folder đã có file; first push không hòa giải remote có history khác. Git command timeout local 30 giây, network 90 giây; preview tối đa 2000 file/100 MiB, mỗi file 20 MiB. Chỉ tạo initial commit khi chưa có HEAD. `.gitignore` managed block được merge/update nhưng không untrack file đã commit. Agent socket và private key không được trả qua API; public_key/key_path/fingerprint dùng để thiết lập và chẩn đoán. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
+
+## Payload mẫu chạy job
 
 Notebook job (file phải có trong workspace):
 

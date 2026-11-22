@@ -1,43 +1,36 @@
-# Trạng thái kiểm chứng
+# Quy trình kiểm thử và xác minh deployment
 
-Baseline ứng dụng: **V3.1.3 + hotfix quyền image e842c7a**. Bảng này tách kết quả được ghi nhận ở phiên bản hiện tại với kết quả lịch sử. Tài liệu mới không tự nâng trạng thái thành đã nghiệm thu trên Ubuntu thật.
+Tài liệu định nghĩa cách kiểm tra; không là nhật ký kết quả của một host. Ghi kết quả thực tế trong hồ sơ nghiệm thu riêng theo [ACCEPTANCE](ACCEPTANCE.md), kèm commit, image IDs, thời gian, môi trường, PASS/FAIL và giới hạn.
 
-## Đã kiểm tra cho baseline này
+## Các lớp kiểm tra
 
-| Phạm vi | Phương pháp / kết quả | Giới hạn |
+| Lớp | Mục tiêu | Không thay thế |
 |---|---|---|
-| Unit/contract tests | 87 pytest PASS, Docker Linux trên máy dev Windows | Fake storage/API, không là R2 integration |
-| Build/frontend | Image runtime/catalog và extension 3.1.3 build được | Dependency inputs chưa lock toàn bộ; xem VERSIONS |
-| Shell/config | Compose config, Bash syntax, PowerShell parser đạt | Không thay thế chạy OS installer thật |
-| Quyền image | Tái hiện lỗi root-only 600 trên image cũ; build context 600/700 của image sửa đọc được bằng analyst/UC user | Không dùng R2/production volumes |
-| Bootstrap idempotent | Empty/existing prefix, race marker, không overwrite project/flow, sample opt-out qua unit tests | R2 live chưa hoàn tất |
-| Delete | Unit: path boundary, confirmation, >2000 object batches, partial errors, active multipart. Browser: cancel/file/folder/path confirmation/protected roots PASS | Browser kiểm tra bằng API/storage fixture |
-| dbt sample | dbt 1.12.7 + spark adapter 1.11.0 parse 1 seed/1 model/7 tests; offline Docs generate được | 7 test mới **chưa được xác nhận đã chạy trên Spark/R2** |
-| Open Docs | Browser tải site/index/manifest và render lakehouse_sample | Dùng offline empty catalog, không có live catalog introspection |
-| Reset helper | Test selection đúng 4 owned volumes; refuse external/unowned volumes | Không reset data volumes thật trong test |
+| Unit/contract | Logic workflow, history/retention, path/permission, bootstrap/reset, Git onboarding | Kết nối R2/GitHub thật |
+| Build/package | Backend import, extension bundle, file mode non-root | Start/readiness trên host đích |
+| Git local integration | Agent encrypted key, init/ignore/preview, clone/first push bằng repo fixture, Git native tiếp tục commit/push | Quyền GitHub/branch protection thực tế |
+| UI | Mở lại tab, form/trạng thái/lỗi, preview/selection và native Git handoff | Toàn bộ side effects của provider |
+| R2/Spark/dbt | Tạo/đọc table UC, upload/readback/Delete, seed/build/tests/docs | Restore, performance và an toàn multi-user |
+| Vận hành | SSH/firewall/TLS, RAM/disk, restart/retention, backup/restore | SLA nếu chưa đo tải và RPO/RTO |
 
-Lệnh tái hiện unit/image tests ở [DEVELOPMENT.md](DEVELOPMENT.md). Unit output baseline: `87 passed`. Image regression output: analyst import/read/template generation PASS; catalog non-root startup readable/executable PASS. Đây là kết quả ghi nhận, không phải job CI tự chạy.
+Lệnh và side effects của các test ở [DEVELOPMENT](DEVELOPMENT.md). Chạy storage tests trên bucket/schema/prefix thử; kiểm kế hoạch cleanup trước thao tác ghi/xóa. Unit fixtures không dùng credential hay volume production.
 
-## Kiểm tra bộ tài liệu bàn giao
+## Kiểm tra Git
 
-Đã kiểm tra 30 file Markdown: 201 liên kết file nội bộ, code fence/table columns, bao phủ 36 biến của .env.example và toàn bộ module Python cấp đầu trong runtime ở source map. Parser đạt cho 44 block Bash, 9 PowerShell, 2 Python, 10 JSON và 1 YAML; các Python heredoc được kiểm cú pháp riêng. Đã kiểm Compose merge của proxy override, Jupyter proxy traits và Caddyfile qua `caddy adapt`; đã rà credential thật của env local và private-key headers trong file thay đổi, không phát hiện khớp. Đây là kiểm tra tài liệu/cấu hình tham khảo, không chạy các lệnh cài đặt, firewall, TLS hay phục hồi trên server thật.
+Kiểm cả repo mới và repo có code. Repo mới: tạo GitHub repo trống → init/connect → ignore tự động → SSH key/Unlock → Review → commit → push/upstream. Repo có code: clone vào folder mới → giữ history/upstream → ignore được bổ sung → native Git commit/push tiếp. Cần thử wrong passphrase, key có sẵn không bị ghi đè, remote khác/non-empty bị từ chối, file đổi sau preview, custom ignore được giữ và container restart yêu cầu unlock lại encrypted key.
 
-## Chưa hoàn tất hoặc chưa chạy
+GitHub read test không chứng minh write access. Kiểm protected branch/quyền tổ chức bằng repo thử được cấp phép. Không dùng force push để làm test đạt.
 
-- End-to-end flow **seed → build/7 tests → docs** mới trên R2: lần thử credential local trả Unauthorized ở ListObjectsV2; không được gán SUCCESS dựa vào parse/UI fixture.
-- Cài máy Ubuntu 22.04 trắng, public HTTP/HTTPS/SSH/firewall và profile RAM 16 GB trên host của người dùng: cần biên bản thực tế.
-- Power BI/ADF/gateway/driver thực tế; DirectQuery và Delta sink qua ODBC.
-- Tải/throughput 300 GB, traffic 50 GB/tháng, upload lớn và memory/performance SLA.
-- Restore drill mới cho đúng bản backup/Delta data/config deployment hiện tại; RPO/RTO chưa đo.
-- Các tính năng chưa triển khai như per-user UC auth/shared cluster không phải mục có thể tick PASS bằng test hiện có; xem [DECISIONS.md](DECISIONS.md).
+## Kiểm tra tài liệu/cấu hình
 
-## Bằng chứng lịch sử
+Kiểm local Markdown links/ảnh, bảng/code fences, biến env được giải thích, command phù hợp Bash/PowerShell, secret không lọt vào source. Kiểm Compose merge và proxy syntax trước apply. Cú pháp hợp lệ không chứng minh DNS/firewall/TLS/provider credential đúng.
 
-- [VALIDATION_3_1.md](history/VALIDATION_3_1.md): các lần Spark/UC/R2, restart, workflow, archive/restore và UI trước baseline này.
-- [VALIDATION_BEFORE_HANDOVER.md](history/VALIDATION_BEFORE_HANDOVER.md): bản lưu chronology cleanup, source/data split và bổ sung 3.1.3 trước khi tổ chức lại docs.
+## Tiêu chí nghiệm thu dữ liệu
 
-Các kiểm thử tạo/đọc table và restore trước đây có giá trị làm regression reference, không chứng minh chúng đã được chạy lại sau đổi credential/host/metadata. Screenshot cũ có tên sample đã dọn; ảnh Files/Delete và dbt starter Docs mới cũng được ghi rõ là fixture/offline.
+SELECT 1 chưa đủ để chứng minh Delta/UC/R2. Tạo một Delta table sandbox bằng tên ba phần, đọc lại từ session khác, kiểm metadata location và aggregate đã biết. Chạy sample dbt seed → build → docs; xác nhận 7 data tests thực thi, không chỉ dbt parse. Docs là snapshot riêng; run report phải lấy đúng Run ID.
 
-## Ghi kết quả mới
+Restore drill dùng đích sạch, writer cũ dừng và snapshot đã kiểm checksum. Đọc lại dữ liệu bảng đã biết, kiểm workspace/history/config và đo thời gian restore. Snapshot metadata không tái tạo Delta object đã mất.
 
-Dùng [ACCEPTANCE.md](ACCEPTANCE.md), ghi ngày/TZ, người thực hiện, commit, image IDs, phương pháp, side effects, cleanup và PASS/FAIL/NOT RUN. Đưa log đã loại secret/screenshot vào hồ sơ kiểm chứng được bảo vệ; không đưa env/private key vào Git. Không thay lỗi thực tế bằng ảnh mock hoặc chỉ một HTTP 200.
+## Quản lý bằng chứng và kết quả
+
+Hồ sơ mỗi deployment chứa kết quả thực tế, lỗi còn mở, ảnh/log đã loại secret và người phê duyệt ngoại lệ. Không đưa R2 key/env/private key hoặc notebook output nhạy cảm vào Git. Ghi NOT RUN khi chưa thử; việc có code/docs/test fixture không được dùng thay kết quả live integration.

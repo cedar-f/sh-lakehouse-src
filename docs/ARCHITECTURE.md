@@ -1,6 +1,6 @@
 # Kiến trúc và luồng xử lý
 
-Phạm vi: code V3.1.3 + hotfix quyền image. Xem [VERSIONS.md](VERSIONS.md) cho dependency và [HANDOVER.md](HANDOVER.md) cho mục tiêu/ràng buộc.
+Kiến trúc áp dụng cho các service trong Compose. Xem [VERSIONS.md](VERSIONS.md) cho dependency và [HANDOVER.md](HANDOVER.md) cho mục tiêu/ràng buộc.
 
 ## Một host, nhiều service
 
@@ -84,7 +84,13 @@ dbt subprocess dùng dbt-spark method thrift; runner sinh profiles.yml với thr
 
 Đây là integration riêng cần regression khi nâng UC/R2 connector. Scoped credential không thay per-user authorization: UC auth đang disabled, và notebook/runner còn có parent R2 credential trong environment. Xem [SECURITY.md](SECURITY.md).
 
-## Workflow: hai cách thực thi
+## GitHub onboarding và native Git
+
+GitHub panel gọi git_integration.py qua authenticated Jupyter gateway. Init/connect lưu Git author, origin SSH và core.sshCommand theo repo; clone giữ default branch/history/upstream. Cả hai tự merge managed `.gitignore`. Commit đầu chỉ stage file đã review; native Git dùng cùng `.git` sau đó.
+
+Entrypoint notebook khởi động agent tại `$HOME/.ssh/lakehouse-agent.sock` và export SSH_AUTH_SOCK trước exec Jupyter. git_askpass.py chỉ cấp passphrase cho child process; key ở git_ssh, passphrase không persist. Hub dùng start_singleuser.py để mỗi user có agent trong home riêng. Native Git subprocess kế thừa socket nên không cần hỏi passphrase từng push; encrypted key cần Unlock sau agent restart. SSH command pin GitHub Ed25519 host key và giữ StrictHostKeyChecking. Xem [Git workflow](GITHUB_WORKSPACE.md).
+
+## Workflow execution
 
 DAG đơn giản được `workflows.compile_flow()` biên dịch thành Kestra Dag với HTTP Request cho từng task. Node có input/variables, condition/loop/parent, runWhen khác success hoặc biểu thức template đi qua một HTTP task tổng; `workflow_runtime.py` thực thi graph bên trong runner.
 

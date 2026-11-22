@@ -34,7 +34,7 @@ flowchart LR
 - **Files:** cây R2, download/upload nhiều file trong incoming/, progress theo part, cancel/resume. Delete file/thư mục con có confirmation, status và partial errors; root incoming, warehouse và backup được bảo vệ. Xem [REBUILD_DBT.md](REBUILD_DBT.md).
 - **Compute:** status, CPU threads, memory, shuffle, default catalog/schema, Spark config và Save & Restart Spark cho SQL/dbt, kernel được chọn hoặc cả hai.
 - **Notebook/SQL:** Spark và %%sql được nạp khi kernel khởi động; kết quả truy vấn hiển thị dạng bảng. SQL editor và preview giới hạn 1000 dòng.
-- **GitHub:** Git panel cho clone/branch/diff/commit/pull/push; SSH key ở volume riêng.
+- **GitHub:** onboarding repo mới/clone repo có code, auto .gitignore, SSH key/Unlock/shared agent, preview và commit/push đầu; Git panel native cho công việc hằng ngày. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
 - **dbt:** debug/deps/seed/build/test/snapshot/docs; chọn project, selection, catalog/schema. Open Docs mở bộ tài liệu được sinh từ run.
 - **Runs:** tìm name/ID, type/status/from–to, paging/page size. Detail có Code, Logs, Models/Cells, Parameters, Outputs, Artifacts.
 - **Workflow:** bố trí node bằng kéo thả, dependency, Variables, If/Else, For each, Success/Failure/Always, input/output, retry và cron/timezone. Workflow Run History xem từng iteration và log run con.
@@ -44,7 +44,7 @@ flowchart LR
 
 ![Workflow Run History](assets/workflow-history.jpg)
 
-Ảnh minh họa được chụp trong đợt kiểm thử 21/11/2026. Một số tên run trong ảnh thuộc các ví dụ đã được dọn khỏi workspace; lịch sử vẫn được giữ theo retention.
+Ảnh minh họa bố cục UI. Tên sample/run trong ảnh không là dữ liệu bắt buộc của một workspace mới.
 
 ## Giới hạn cần hiểu
 

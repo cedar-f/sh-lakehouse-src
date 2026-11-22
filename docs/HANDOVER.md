@@ -1,65 +1,53 @@
-# Bàn giao R2 Lakehouse
+# Tổng quan hệ thống và thông tin triển khai
 
-Ngày đối chiếu: **22/11/2026**, timezone Asia/Ho_Chi_Minh. Mã ứng dụng: **V3.1.3 + hotfix quyền image**, baseline kỹ thuật `e842c7a`. Tài liệu mô tả code có trong repo; trạng thái server thực tế cần xác nhận bằng [ACCEPTANCE.md](ACCEPTANCE.md).
+R2 Lakehouse là workspace phân tích dữ liệu tự host bằng Docker, tích hợp notebook Python/Spark, SQL, catalog, file browser, Git, dbt và workflow/schedule trong cùng giao diện. Ubuntu 22.04 là nền tảng host; Windows 11 có thể dùng để phát triển hoặc chạy Linux containers bằng Docker Desktop.
 
-## Project giải quyết việc gì?
-
-Một workspace phân tích dữ liệu tự host, có notebook Python/Spark, SQL, catalog, file browser, Git, dbt và workflow/schedule trong cùng giao diện. Windows 11 là máy dev; Ubuntu 22.04 là host dự kiến, hiện được người vận hành báo có 16 GB RAM. Dữ liệu hot lưu bằng Delta Lake trên Cloudflare R2; quy mô mục tiêu ban đầu khoảng 300 GB, truyền tải dự kiến tối đa khoảng 50 GB/tháng, có thể thấp hơn nhiều. Các con số này là yêu cầu dung lượng, **không phải benchmark đã đạt**.
-
-Đây là ứng dụng tích hợp các service độc lập, không phải Databricks Runtime. Có thể quản lý catalog/schema/table bằng tên ba phần, tạo catalog mới, chạy notebook và dbt, xây workflow có biến/điều kiện/loop và xem lịch sử/log. Xem [FEATURES.md](FEATURES.md) và [REQUIREMENTS.md](REQUIREMENTS.md) để phân biệt phần đã có với phần chưa đáp ứng.
+Hệ thống tích hợp các service độc lập, không phải Databricks Runtime. Delta Lake lưu dữ liệu hot trên Cloudflare R2. Quy mô thiết kế tham khảo là 300 GB dữ liệu và 50 GB truyền tải/tháng; hiệu năng và ngân sách cần được đo theo workload tại mỗi deployment.
 
 ## Đọc theo vai trò
 
-| Người nhận | Thứ tự đọc |
+| Vai trò | Tài liệu |
 |---|---|
-| Người dùng dữ liệu | Tài liệu này → [USER_GUIDE](USER_GUIDE.md) → [REBUILD_DBT](REBUILD_DBT.md) → [RUNS_WORKFLOWS](RUNS_WORKFLOWS.md) |
-| Người vận hành | Tài liệu này → [ARCHITECTURE](ARCHITECTURE.md) → [UBUNTU_DEPLOYMENT](UBUNTU_DEPLOYMENT.md) → [ENVIRONMENT](ENVIRONMENT.md) → [OPERATIONS](OPERATIONS.md) → [DISASTER_RECOVERY](DISASTER_RECOVERY.md) |
-| Người bảo trì code | Tài liệu này → [ARCHITECTURE](ARCHITECTURE.md) → [DEVELOPMENT](DEVELOPMENT.md) → [API](API.md) → [VERSIONS](VERSIONS.md) |
-| Người nghiệm thu | [SECURITY](SECURITY.md) → [VALIDATION](VALIDATION.md) → [ACCEPTANCE](ACCEPTANCE.md) |
+| Người dùng | [USER_GUIDE](USER_GUIDE.md), [Git workspace](GITHUB_WORKSPACE.md), [dbt sample/report](REBUILD_DBT.md), [workflow](RUNS_WORKFLOWS.md) |
+| Cài đặt | [Ubuntu](UBUNTU_DEPLOYMENT.md), [Windows](INSTALLATION.md), [env](ENVIRONMENT.md), [RAM/CPU](RESOURCE_PLANNING.md) |
+| Vận hành | [Architecture](ARCHITECTURE.md), [Operations](OPERATIONS.md), [Security](SECURITY.md), [DR](DISASTER_RECOVERY.md) |
+| Bảo trì code | [Development](DEVELOPMENT.md), [API](API.md), [Versions](VERSIONS.md) |
+| Kiểm tra deployment | [Validation](VALIDATION.md), [Acceptance](ACCEPTANCE.md) |
 
-## Các sự thật phải giữ khi tiếp quản
+## Các nguyên tắc hoạt động
 
-1. **UC metadata đang hoạt động ở PostgreSQL SSD.** R2 chứa Delta files, incoming và snapshot backup; clone repo/copy `.env`/dùng cùng bucket không tự kế thừa catalog cũ.
-2. **Spark local, nhiều JVM độc lập.** SQL/dbt dùng SQL service. Mỗi notebook kernel tương tác và notebook nền có Spark riêng. Chưa có shared Spark cluster, Spark Connect hoặc autoscaling.
-3. **Một miền người dùng tin cậy.** UC authorization tắt; SQL dùng NOSASL; UI Permissions không thực thi RBAC. Chế độ nhiều user không tạo ranh giới dữ liệu riêng.
-4. **Repo source khác repo dữ liệu làm việc.** Source gồm application, scripts, docs và template sample. Workspace chứa code notebook/dbt/workflow của người dùng; `.env`, named volumes và backup không thuộc Git source.
-5. **Rebuild khác reset.** Rebuild dùng lại dữ liệu và cấu hình. `--reset-metadata` chủ động xóa UC/Kestra metadata và lịch sử/artifact local, sau preflight R2. Nó không xóa object R2 hay workspace.
-6. **Backup hiện tại không nhân bản Delta data.** Xóa cả bucket có thể làm mất đồng thời dữ liệu bảng và snapshot lưu trong bucket đó. Xem [DISASTER_RECOVERY](DISASTER_RECOVERY.md).
+1. UC metadata hoạt động trên PostgreSQL SSD. R2 giữ Delta, incoming và snapshot backup. Clone source hoặc dùng cùng bucket không tự kế thừa catalog; chuyển host cần restore metadata.
+2. Spark chạy local, mỗi kernel/notebook nền có JVM riêng; SQL/dbt dùng SQL service. Chưa có shared Spark cluster/autoscaling.
+3. Người dùng thuộc cùng miền tin cậy. UC authorization tắt, SQL dùng NOSASL, UI Permissions không enforce RBAC.
+4. Repo source hệ thống khác repo workspace. Source chứa application/scripts/docs/templates; workspace chứa notebook/model/workflow. Secret, database volumes và backup không thuộc Git source.
+5. Rebuild giữ state; reset metadata là thao tác xóa có flag riêng. Không dùng reset để upgrade hoặc chữa credential.
+6. Snapshot hiện tại không nhân bản toàn bộ Delta data. Cần kế hoạch backup data độc lập nếu phải chịu được mất bucket.
+7. Tab GitHub thiết lập repo/key/commit đầu; Git panel Jupyter dùng cùng `.git` và SSH agent cho công việc hằng ngày. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
 
-## Thông tin triển khai và người chịu trách nhiệm
+## Hồ sơ vận hành riêng cho mỗi deployment
 
-Thông tin đã được cung cấp/quan sát, không phải kết quả SSH kiểm tra host:
+Người quản trị lưu các trường dưới đây ở nơi được bảo vệ; không điền secret trực tiếp vào tài liệu Git. Đây là mẫu thông tin cần quản lý, không phải cấu hình của một máy cụ thể.
 
-| Hạng mục | Giá trị / nơi lấy |
+| Hạng mục | Cách xác định |
 |---|---|
-| Source repo | `https://github.com/cedar-f/sh-lakehouse-src.git`, nhánh main; kiểm tra lại `git remote -v` |
-| Source máy dev | `D:\r2-lakehouse-v3`; đường dẫn này không bắt buộc trên máy khác |
-| Source Ubuntu trong ảnh vận hành | `~/data/sh-lakehouse-src`; với root tương ứng `/root/data/sh-lakehouse-src` |
-| Host đích | Ubuntu 22.04, RAM 16 GB theo người vận hành; CPU/disk/architecture cần ghi lại từ máy thật |
-| Workspace thực tế | Giá trị WORKSPACE_DIR trong `.env`, không suy ra từ đường dẫn source |
-| R2 bucket/endpoint | Lấy từ `.env` của host; không đưa Access Key/Secret vào bản bàn giao |
-| IP/domain, SSH user/port | Người vận hành điền vào hồ sơ triển khai riêng; không dựa vào IP cũ trong ảnh chat |
-| Owner hệ thống / người nhận cảnh báo | **Chưa chỉ định**; cần chốt trước vận hành lâu dài |
-| Lịch backup, nơi giữ secret, bản sao Delta độc lập | **Chưa cấu hình mặc định**; cần ghi nhận quyết định |
-| RPO/RTO và tải chấp nhận được | **Chưa cam kết**; đo và điền sau diễn tập restore/benchmark |
-
-Giao quyền truy cập server, GitHub và R2 qua cơ chế quản lý quyền/secret của chủ sở hữu. Hồ sơ bàn giao ghi nơi lưu và người có quyền, không ghi mật khẩu/token trực tiếp.
-
-## Ranh giới kiểm chứng
-
-Đã có 87 kiểm thử Python, build frontend, regression quyền file Linux và kiểm tra UI bằng fixture. Những lần tạo/đọc Delta và restore trước đây có bằng chứng lịch sử. **Flow dbt sample mới chưa được xác nhận end-to-end trên R2 trong baseline này**, vì credential local trả Unauthorized. Tài liệu public HTTPS là cấu hình tham khảo theo nguồn chính thức, chưa được triển khai/nghiệm thu trên Ubuntu của người dùng.
-
-Người nhận hoàn tất checklist nghiệm thu, ghi commit/hash image và kết quả mới. Một tài liệu không thay thế việc kiểm tra môi trường thật. Các bước còn trống không được coi là đã PASS.
+| Source URL / branch / commit | git remote, git branch, git rev-parse |
+| Host / OS / CPU / RAM / disk | Inventory của host và Docker engine |
+| Source directory / WORKSPACE_DIR / Compose project | Đường dẫn và env thực tế |
+| IP/domain / SSH user và port / public mode | Firewall, DNS, proxy và listener thực tế |
+| R2 bucket / endpoint / backup prefix | Env deployment; key lưu trong secret store |
+| Owner / người nhận cảnh báo | Phân công vận hành |
+| Lịch backup / bản sao Delta độc lập | Chính sách backup và retention |
+| RPO/RTO / giới hạn tải | Cam kết sau benchmark và restore drill |
 
 ## Thuật ngữ
 
-| Tên | Ý nghĩa trong project |
+| Tên | Định nghĩa |
 |---|---|
-| Workspace | Thư mục code dùng chung và các panel UI; không phải tài nguyên Databricks Cloud |
-| Compute | Cấu hình/process Spark local; không phải cụm máy tự cấp phát |
-| Catalog / schema | Namespace và metadata UC; tên bảng `catalog.schema.table` |
-| Volume UC | Metadata external volume incoming trên R2; khác Docker named volume |
-| Run ID | ID 32 ký tự hex của một job runner |
-| Execution ID | ID execution Kestra, khác Run ID; một execution có thể liên kết nhiều run |
-| dbt report | Kết quả thực thi/test trong Runs; dbt Docs là tài liệu/lineage snapshot riêng |
-| Folder R2 | Prefix object key, có thể có marker 0 byte; không phải POSIX directory |
+| Workspace | Thư mục code và các panel UI của hệ thống |
+| Compute | Cấu hình/process Spark local |
+| Catalog / schema | Namespace metadata UC; bảng có tên catalog.schema.table |
+| UC volume | Metadata external file location; khác Docker named volume |
+| Run ID | ID 32 hex của một job runner |
+| Execution ID | ID Kestra; có thể liên kết nhiều Run ID |
+| dbt report / Docs | Kết quả thực thi/test và tài liệu/lineage snapshot riêng |
+| Folder R2 | Prefix object key, có thể có marker 0 byte |

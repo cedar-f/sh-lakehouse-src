@@ -18,7 +18,7 @@
 | spark_session.py, startup.py, start.sh | Spark notebook và SQL magic tự nạp |
 | sql_server.py, sql_supervisor.py, service_readiness.py, health.py | SQL Thrift, readiness/restart và health probes |
 | sql_job.py | SQL CLI subprocess của background/workflow job, lưu result.json |
-| hub_config.py, start_hub.py | PAM/Spawner, account restore và đường dẫn state/PID của Hub |
+| hub_config.py, start_hub.py, start_singleuser.py | PAM/Spawner, account restore và đường dẫn state/PID của Hub |
 | import_v2.py, smoke_test.py | Đăng ký registry bảng V2 và smoke test có ghi dữ liệu thật |
 | bootstrap.py, platform_bootstrap.py, templates/dbt_sample | R2 layout, UC namespace và sample idempotent |
 | lakehouse_server.py | Jupyter auth gateway, Files/upload/Delete, artifact/Docs serving, Compute API |
@@ -29,6 +29,7 @@
 | workflows.py / workflow_runtime.py / workflow_history.py | Compile DAG, expression/logic engine và execution history |
 | run_support.py / run_store.py | Code snapshots, process capture/limits, SQLite index, logs/cells/models/artifacts |
 | retention.py / migrate_runtime.py / backup_storage.py | Retention, migration có hash và snapshot archive |
+| git_integration.py / git_askpass.py / labextension/github.js | Git onboarding/clone/ignore, bounded preview/commit/push và SSH agent/askpass dùng chung với native Git |
 | file_deletion.py | Validate target/confirmation, active upload preflight, batch delete và partial errors |
 | labextension/index.js | Đăng ký sidebar/tab, API helper và các panel chính |
 | labextension/filetree.js / compute.js / workflow.js / history.js / style.css | Tree, restart UI, graph editor, history/detail và CSS |
@@ -55,7 +56,7 @@ Sau khi có runtime image, chạy tại root repo (Bash hoặc PowerShell):
 docker run --rm --user root -v "${PWD}:/project:ro" -w /project -e PYTHONPATH=/project/runtime r2-lakehouse-v3-runtime:local python3 -m pytest -p no:cacheprovider runtime/tests tests/test_reset_metadata.py -q
 ```
 
-Baseline có 87 test. Đây là unit/fake storage/API contract tests, không chứng minh một deployment R2/Ubuntu thật đã chạy thành công. Nhóm chính: workflow validation/semantics, notebook capture, log/history/retention, temp ownership, restart/readiness, backup archive, bounded deletion, idempotent bootstrap và reset volume ownership. Các test reset không xóa Docker volume thật.
+Suite gồm unit/fake storage/API contract tests và Git/SSH local integration; không thay thế integration trên deployment R2/Ubuntu/GitHub thật. Nhóm chính: workflow validation/semantics, notebook capture, log/history/retention, temp ownership, restart/readiness, backup archive, bounded deletion, idempotent bootstrap và reset volume ownership. Các test reset không xóa Docker volume thật.
 
 ### Regression quyền file Linux
 
@@ -73,10 +74,11 @@ Trong virtualenv riêng, cài `tests/requirements-ui.txt`, cài Chromium bằng 
 |---|---|
 | `python tests/ui_tabs_files.py` | Ghi object thử dưới incoming prefix ngẫu nhiên, kiểm tra tree/upload và cleanup các key thử |
 | `python tests/ui_compute_restart.py` | Restart/configure Spark và thao tác notebook; dùng môi trường riêng, đọc fixture/cleanup trong script |
+| `python tests/ui_git_setup.py` | Tạo/xóa container Docker riêng với repo bare local; kiểm GitHub wizard, key encrypted, native Git và restart. Không đọc .env hoặc gọi GitHub/R2. LAKEHOUSE_GIT_TEST_IMAGE chọn runtime image |
 | `bash scripts/check.sh` | Smoke test có ghi Delta table thật; cần kế hoạch dọn table thử |
 | `bash scripts/check-notebook.sh notebooks/my_job.ipynb` | Thực thi notebook thật và mọi side effect trong notebook |
 
-Chưa có pipeline CI/CD trong repo. Không mô tả UI test hoặc R2 integration như đã tự chạy trên mỗi commit. Mẫu dbt và checklist integration nằm tại [ACCEPTANCE.md](ACCEPTANCE.md).
+Chưa có pipeline CI/CD trong repo. Không mô tả UI test hoặc R2 integration như tự chạy trên mỗi commit. Mẫu dbt và checklist integration nằm tại [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Quy trình sửa một chức năng
 
@@ -84,8 +86,8 @@ Chưa có pipeline CI/CD trong repo. Không mô tả UI test hoặc R2 integrati
 2. Xác định module UI/API/runner/storage liên quan từ bảng trên. Thay API phải sửa cả contract docs và caller.
 3. Chạy unit liên quan rồi suite khi thay shared config/history/runner. Chỉ dùng sandbox R2 cho thao tác ghi/xóa.
 4. Build image; backend/frontend được COPY vào image, không hot reload từ source host. Java adapter đổi thì build catalog nữa.
-5. Lưu notebook, chờ job kết thúc và rebuild stack thử; xác nhận health/UI. Update [VALIDATION.md](VALIDATION.md) với phương pháp và giới hạn, không chỉ ghi PASS.
-6. Commit source đã rà soát, không commit `.env`, key, workspace, named volume hay artifact. Cập nhật [../CHANGELOG.md](../CHANGELOG.md).
+5. Lưu notebook, chờ job kết thúc và rebuild stack thử; xác nhận health/UI. Cập nhật quy trình [VALIDATION.md](VALIDATION.md) nếu contract đổi; kết quả/log thực tế giữ trong hồ sơ kiểm thử riêng.
+6. Commit source đã rà soát, không commit `.env`, key, workspace, named volume hay artifact. Cập nhật tài liệu định nghĩa/hướng dẫn liên quan khi thay hành vi.
 
 ### Khi thêm task workflow
 

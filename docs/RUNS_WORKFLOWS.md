@@ -1,6 +1,6 @@
 # Runs, dbt Docs, workflow và dữ liệu vận hành
 
-Áp dụng implementation V3.1.3; phần ví dụ variable_if_foreach_demo có thể dựng lại từ các bước bên dưới. Starter cài mới là dbt_sample_pipeline theo [REBUILD_DBT.md](REBUILD_DBT.md).
+Ví dụ variable_if_foreach_demo được dựng từ các bước bên dưới. Starter cài mới là dbt_sample_pipeline theo [REBUILD_DBT.md](REBUILD_DBT.md).
 
 ## Các màn hình
 
@@ -41,7 +41,7 @@ DAG đơn giản vẫn là từng task HTTP trong Kestra. Flow có logic/input/b
 
 ## Ví dụ thực hành: Variable dùng trong cả If và For each
 
-Trên workspace máy dev trước khi tách source/data, flow `variable_if_foreach_demo` đã được giữ tại `/workspace/workflows/variable_if_foreach_demo.json` và đã publish/chạy thử. Đây là trạng thái lịch sử của máy dev, không phải file được Git cài vào host mới. Khi cài mới từ Git, tạo workflow mới với các task và trường mô tả dưới đây, rồi Save & publish. Ví dụ chỉ dùng SQL SELECT tính toán.
+Tạo workflow mới có ID `variable_if_foreach_demo` theo các trường bên dưới, rồi Save & publish. Ví dụ chỉ dùng SQL SELECT tính toán; không phụ thuộc notebook hay dữ liệu mẫu có sẵn.
 
 1. Refresh trang, mở **Workflows**.
 2. Nếu có sẵn `variable_if_foreach_demo`, chọn Saved workflow và bấm **Load**. Nếu cài mới, đặt Flow ID này rồi thêm task theo cấu trúc dưới đây.
@@ -157,6 +157,6 @@ If trả false, `show_skipped` chạy trong Else và không có iteration. Thử
 {"numbers": [4, 7], "factor": 5}
 ```
 
-If dùng biến mới, For each lặp 2 lần và result là 20, 35. Không cần sửa định nghĩa flow khi thay input mỗi lần chạy. Cả 4 trường hợp trên có kết quả SUCCESS qua Kestra/Spark SQL trong đợt kiểm tra lịch sử; xem [Validation](VALIDATION.md). Host mới vẫn cần chạy lại nghiệm thu.
+If dùng biến mới, For each lặp 2 lần và result là 20, 35. Không cần sửa định nghĩa flow khi thay input mỗi lần chạy. Dùng bốn trường hợp này để kiểm tra Then/Else, list rỗng và override input trên deployment theo [Validation](VALIDATION.md).
 
 Cấu hình timezone và retention nằm trong [ENVIRONMENT.md](ENVIRONMENT.md); backup, volume và cleanup được hướng dẫn trong [OPERATIONS.md](OPERATIONS.md).

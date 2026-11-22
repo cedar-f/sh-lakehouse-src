@@ -16,6 +16,6 @@ Script yêu cầu nhập password trực tiếp trong terminal, tạo home và s
 
 Khi vận hành Hub, luôn dùng `docker compose -f compose.yaml -f compose.hub.yaml ...` để các lần recreate giữ đúng chế độ. Backup hai volume hub_state và hub_home riêng với quyền truy cập chặt chẽ. Chế độ này chưa được xem là cơ chế phân quyền table, volume hay workflow theo từng người.
 
-Lệnh quyền truy cập volume phía trên dành cho workspace tin cậy dùng chung group 1000. Sau khi tạo user, kiểm tra tạo notebook, Spark startup, chạy SQL và tải artifact bằng user đó; bản mặc định của đợt cleanup được kiểm tra ở chế độ single-user. Proxy PID của Hub được cấu hình tại `/srv/jupyterhub/jupyterhub-proxy.pid` trong hub_state, không còn tạo PID ở gốc workspace.
+Lệnh quyền truy cập volume phía trên dành cho workspace tin cậy dùng chung group 1000. Sau khi tạo user, kiểm tra tạo notebook, Spark startup, chạy SQL và tải artifact bằng user đó; nghiệm thu Hub riêng với từng user và giới hạn quyền đã xác định. Mỗi user có SSH agent riêng được khởi động qua start_singleuser.py, key lưu trong home của user trên hub_home. Mở khóa key của đúng user trong tab GitHub. Proxy PID của Hub ở `/srv/jupyterhub/jupyterhub-proxy.pid` trong hub_state; workspace không dùng để lưu PID.
 
 Để quay lại single-user, dừng service notebook bằng cả hai compose file rồi chạy `docker compose up -d notebook` với compose mặc định. Bảo toàn hub_home/hub_state nếu muốn bật Hub trở lại sau này.

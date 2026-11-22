@@ -44,13 +44,17 @@ Dùng `CREATE TABLE ... USING DELTA ...`, kiểm tra `SELECT current_catalog(), 
 
 Kiểm tra 4 biến R2, bucket/endpoint và quyền S3 credential. Secret Access Key khác token Bearer. Kiểm tra đồng hồ host nếu chữ ký không hợp lệ. Khi chia sẻ log, che credential; không đăng `.env` công khai. UC metadata kết nối được chưa bảo đảm credential storage đúng.
 
-## dbt đọc nhầm checkpoint / model lạ
+## Git push cần passphrase / Permission denied
+
+Mở GitHub → Refresh status, kiểm key loaded; dùng Unlock SSH key với passphrase hiện có. Jupyter và wizard cần cùng SSH agent do entrypoint tạo, không phải agent riêng trong một terminal. Repo phải có origin SSH, đúng key/quyền write và upstream. Sau cập nhật entrypoint cần rebuild/recreate notebook. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md) cho luồng init/clone/auto ignore và các lỗi remote/branch protection.
+
+## dbt checkpoint và model
 
 Project cần .dbtignore; runner tự thêm quy tắc bỏ qua `.ipynb_checkpoints`. Kiểm tra model/seed selection, lỗi trong Models/Logs của run, trạng thái SQL và catalog/schema đích. Dùng Open Docs cho snapshot docs đã thành công; bấm docs để tạo mới sau khi sửa model.
 
 ## Workflow không thấy file / không thấy sample cũ
 
-Source không chứa workspace cá nhân. Bootstrap cài mới tạo `dbt_sample_pipeline` nếu SEED_SAMPLE_DBT=true và file còn thiếu; ví dụ `variable_if_foreach_demo` trong workspace dev cũ không được copy từ Git. Dựng lại theo [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md) nếu cần. Notebook job dùng path tương đối dưới workspace của bạn. Lưu notebook trước khi gọi; cập nhật Workspace path của node khi đổi tên/chuyển file. Refresh browser nếu dropdown workflow còn danh sách cache cũ. Lịch sử có thể vẫn có execution của định nghĩa đã xóa.
+Source không chứa workspace cá nhân. Bootstrap cài mới tạo `dbt_sample_pipeline` nếu SEED_SAMPLE_DBT=true và file còn thiếu; ví dụ `variable_if_foreach_demo` là hướng dẫn dựng flow, không được bootstrap tự tạo. Dựng lại theo [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md) nếu cần. Notebook job dùng path tương đối dưới workspace của bạn. Lưu notebook trước khi gọi; cập nhật Workspace path của node khi đổi tên/chuyển file. Refresh browser nếu dropdown workflow còn danh sách cache cũ. Lịch sử có thể vẫn có execution của định nghĩa đã xóa.
 
 ## If/For each báo biến không tồn tại
 
@@ -68,9 +72,9 @@ Build image mới và recreate notebook, sau đó Ctrl+F5. Code frontend đượ
 
 Docker image chạy bằng user analyst (UID 1000), dù host Ubuntu đang đăng nhập root. Khi source được checkout với umask 077, file mới có thể là 600 và directory là 700. Docker COPY giữ mode đó với ownership root, khiến analyst không đọc được module/template. Đây là lỗi đóng gói image, không chữa bằng cách chạy Bash bằng sudo trên host.
 
-Dockerfile đã chuẩn hóa quyền đọc/traverse của code và frontend sau COPY; code vẫn root-owned và analyst không được sửa. Catalog startup script dùng mode 0755 rõ ràng.
+Dockerfile chuẩn hóa quyền đọc/traverse của code và frontend sau COPY; code vẫn root-owned và analyst không được sửa. Catalog startup script dùng mode 0755 rõ ràng.
 
-Sau khi commit sửa lỗi đã được push, chạy trên Ubuntu:
+Cập nhật source và rebuild trên Ubuntu:
 
 ```bash
 cd ~/data/sh-lakehouse-src

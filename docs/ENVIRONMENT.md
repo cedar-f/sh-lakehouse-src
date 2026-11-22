@@ -10,7 +10,7 @@
 WORKSPACE_DIR=../lakehouse-data/workspace
 ```
 
-Trên Ubuntu có thể dùng đường dẫn tuyệt đối như `/srv/lakehouse-data/workspace`; Windows dùng dấu `/`, ví dụ `D:/lakehouse-data/workspace`. Sửa `.env` xong chạy init lần nữa để tạo thư mục, rồi start. Đổi đường dẫn **không tự chuyển dữ liệu**: nếu workspace cũ có dữ liệu, dừng writer và chuyển nguyên thư mục trước khi recreate. Trên máy dev đã thực hiện chuyển an toàn và đặt `../r2-lakehouse-data/workspace`.
+Trên Ubuntu có thể dùng đường dẫn tuyệt đối như `/srv/lakehouse-data/workspace`; Windows dùng dấu `/`, ví dụ `D:/lakehouse-data/workspace`. Sửa `.env` xong chạy init lần nữa để tạo thư mục, rồi start. Đổi đường dẫn **không tự chuyển dữ liệu**: nếu workspace cũ có dữ liệu, dừng writer và chuyển nguyên thư mục trước khi recreate. Ví dụ thư mục riêng: `../lakehouse-data/workspace`.
 
 Thư mục này chứa notebook, dbt, workflow và `.lakehouse/spark.json`. Toàn bộ workspace không được track trong repo source hệ thống. Xem [GIT_SOURCE.md](GIT_SOURCE.md).
 
@@ -82,7 +82,7 @@ SQL_MEMORY=2g
 RUNNER_MEMORY=2g
 ```
 
-Đây là cấu hình đã dùng cho một số kiểm thử nhỏ, không phải cam kết xử lý 300 GB trên máy RAM nhỏ.
+Đây là cấu hình khởi đầu cho workload nhỏ, không là cam kết xử lý 300 GB trên máy RAM nhỏ.
 
 Compute → Save & Restart Spark lưu cấu hình vào `WORKSPACE_DIR/.lakehouse/spark.json` trên host, tương ứng `/workspace/.lakehouse/spark.json` trong container. File này ghi đè các giá trị Spark mặc định từ `.env`. Đổi `.env` không tự xóa cấu hình đã lưu ở Compute. Dùng ô Extra Spark config để thêm `{"spark.sql.sources.default":"delta"}` nếu muốn CREATE TABLE bỏ qua USING vẫn mặc định dùng Delta; hoặc ghi rõ `USING DELTA` trong SQL.
 
@@ -151,3 +151,5 @@ Các biến sau do Compose/entrypoint đặt, thường không cần thêm vào 
 **Biến của Docker Compose**, khác app variables: COMPOSE_FILE cho phép dùng override, ví dụ `compose.yaml:docs/examples/compose.proxy.yaml` trên Ubuntu. Chuẩn bị file local theo [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md) trước khi bật. Đổi project name bằng CLI/env thay namespace named volumes; kiểm kết quả `docker compose config`/ps và không coi volume mới trống là dữ liệu cũ đã mất.
 
 Không source .env thành shell script. Tránh in toàn bộ `docker compose config` hoặc Docker inspect environment vào log bàn giao vì có secret đã được interpolate; dùng config --quiet và inspect field cụ thể.
+
+Git onboarding không cần thêm secret vào `.env`. SSH_AUTH_SOCK được entrypoint đặt thành `$HOME/.ssh/lakehouse-agent.sock` trước khi chạy Jupyter; Hub đặt riêng theo user. LAKEHOUSE_SSH_PASSPHRASE chỉ được truyền trong environment của child askpass/ssh-add, không đặt ở Compose hoặc env global.

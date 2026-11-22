@@ -14,6 +14,7 @@ from tornado import web
 from config import ROOT, RUNTIME, identifier, uc, all_catalogs, timezone_name
 from cluster_restarts import ClusterRestarts
 from file_deletion import delete_batch, delete_target
+import git_integration
 
 def _jupyter_server_extension_points(): return [{'module':'lakehouse_server'}]
 
@@ -94,6 +95,8 @@ class API(JupyterHandler):
             elif path.startswith('cluster/restarts/'):
                 result=self.restarts.snapshot(path.rsplit('/',1)[1])
             elif path=='preferences':result={'timezone':timezone_name()}
+            elif path=='git/status':result=await asyncio.to_thread(git_integration.status,self.get_argument('path','.'),ROOT)
+            elif path=='git/preview':result=await asyncio.to_thread(git_integration.preview,self.get_argument('path','.'),ROOT)
             elif path=='maintenance' or path.startswith(('history/','runs/','workflow-history/','docs/')):
                 query=self.request.query
                 result=await self.runner('GET',path+('?' + query if query else ''))
@@ -127,7 +130,9 @@ class API(JupyterHandler):
                     UploadId=meta['upload_id'],PartNumber=number,Body=self.request.body)
                 return self.finish_json({'ETag':result['ETag'],'PartNumber':number})
             data=json.loads(self.request.body or '{}')
-            if path in ('catalogs','schemas'):
+            if path.startswith('git/'):
+                result=await asyncio.to_thread(git_integration.action,path[4:],data,ROOT)
+            elif path in ('catalogs','schemas'):
                 identifier(data['name'])
                 payload={'name':data['name'],'comment':data.get('comment','')}
                 if path=='catalogs': payload['storage_root']=f"s3://{os.environ['R2_BUCKET']}/warehouse/{data['name']}"

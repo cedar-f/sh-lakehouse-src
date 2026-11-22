@@ -2,7 +2,7 @@
 
 Luồng chính cho Ubuntu 22.04 và máy dev Windows 11. Dùng tài khoản có sudo; nếu host hiện dùng root, sudo vẫn có thể bỏ theo môi trường, nhưng không đổi user runtime của container để chữa lỗi quyền. Hướng dẫn single-user; Hub có quy trình riêng tại [MULTIUSER.md](MULTIUSER.md).
 
-Thay USER_UBUNTU, IP_SERVER và OWNER/REPO bằng thông tin thật. IP_SERVER ở các lệnh truy cập Internet là public IP; hostname -I chỉ cho biết địa chỉ interface của máy. Source repo hiện tại là `cedar-f/sh-lakehouse-src`; kiểm tra quyền truy cập và branch trước khi clone. `.env` không nằm trong Git.
+Thay USER_UBUNTU, IP_SERVER và OWNER/REPO bằng thông tin thật. IP_SERVER ở các lệnh truy cập Internet là public IP; hostname -I chỉ cho biết địa chỉ interface của máy. OWNER/REPO là repository source platform của đơn vị triển khai; kiểm tra quyền truy cập và branch trước khi clone. `.env` không nằm trong Git.
 
 ## 1. Chuẩn bị OS và SSH
 
@@ -21,7 +21,7 @@ df -h /
 uname -m
 ```
 
-Mục tiêu đã dùng để thiết kế là host Intel/AMD 64-bit; kiến trúc khác cần kiểm tra image/dependency thực tế. Dành disk cho Docker/temp, không chỉ source; đọc [RESOURCE_PLANNING.md](RESOURCE_PLANNING.md) và dùng profile 16 GB nếu phù hợp. sudo không hiện ký tự khi nhập password là bình thường.
+Nền tảng host là Intel/AMD 64-bit; kiến trúc khác cần kiểm tra image/dependency thực tế. Dành disk cho Docker/temp, không chỉ source; đọc [RESOURCE_PLANNING.md](RESOURCE_PLANNING.md) và dùng profile 16 GB nếu phù hợp. sudo không hiện ký tự khi nhập password là bình thường.
 
 ### Mở SSH trước khi bật firewall
 
@@ -109,7 +109,7 @@ chmod 600 .env
 Hai lệnh trên không làm rỗng nội dung file đang có. Bước SCP kế tiếp sẽ thay nội dung .env; nếu host đã có cấu hình cần giữ, lưu bản private riêng hoặc dùng bản đó thay cho SCP. Nếu SCP lỗi, dừng và xử lý trước init/start. Trên Windows PowerShell:
 
 ```powershell
-scp "D:\r2-lakehouse-v3\.env" USER_UBUNTU@IP_SERVER:data/sh-lakehouse-src/.env
+scp "D:\lakehouse\.env" USER_UBUNTU@IP_SERVER:data/sh-lakehouse-src/.env
 ```
 
 Đổi local path nếu source của bạn ở nơi khác. Trên Ubuntu chuẩn hóa text và quyền, không in secret:
@@ -225,7 +225,7 @@ sudo systemctl reload caddy
 
 Caddy quản lý chứng chỉ/renew khi DNS, đường tới 80/443 và certificate storage phù hợp; [Automatic HTTPS](https://caddyserver.com/docs/automatic-https). Reverse proxy hỗ trợ WebSocket, cần cho notebook/terminal; [Caddy reverse_proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
 
-Kiểm tra https://lakehouse.example.com/lab và https://kestra.example.com/ui, login, kernel WebSocket, upload >32 MiB, Open Docs và workflow. Khi lỗi xem `sudo journalctl -u caddy -n 100 --no-pager`. Nếu trước đó public raw ports, xác nhận Docker đã bind lại loopback rồi gỡ inbound rule 8888/8082 ở provider và UFW. Mẫu này chưa được nghiệm thu trên host thật; ghi kết quả theo [VALIDATION.md](VALIDATION.md).
+Kiểm tra https://lakehouse.example.com/lab và https://kestra.example.com/ui, login, kernel WebSocket, upload >32 MiB, Open Docs và workflow. Khi lỗi xem `sudo journalctl -u caddy -n 100 --no-pager`. Nếu trước đó public raw ports, xác nhận Docker đã bind lại loopback rồi gỡ inbound rule 8888/8082 ở provider và UFW. Nghiệm thu cấu hình trên host đích theo [VALIDATION.md](VALIDATION.md).
 
 ### B. Public HTTP trực tiếp — chỉ dùng thử draft
 

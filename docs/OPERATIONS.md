@@ -40,7 +40,11 @@ bash scripts/check-notebook.sh notebooks/ten_notebook_cua_ban.ipynb
 
 Docker Desktop quản lý volume trong virtual disk; trên Ubuntu volume thuộc Docker data root. Xem volume của project bằng `docker volume ls` và `docker volume inspect <volume_name>`, không sửa trực tiếp file database trong volume.
 
-## Cleanup và retention
+## Git sau recreate hoặc chuyển host
+
+Key single-user được giữ ở git_ssh; encrypted key cần mở lại trong GitHub → Unlock SSH key sau khi agent/container restart. Kiểm tra status Key loaded trước push từ Jupyter Git. Key của host pull source và key analyst push workspace là hai phạm vi riêng. Backup/restore key theo [DISASTER_RECOVERY](DISASTER_RECOVERY.md); Hub dùng key trong home của user. Cập nhật onboarding xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
+
+## Artifact cleanup và retention
 
 Trong Compute → Artifact retention & cleanup, dùng **Preview cleanup** trước khi bấm **Clean eligible artifacts now**. Runner tự dọn mỗi giờ: artifact terminal quá tuổi, rồi artifact cũ nhất khi vượt quota. Metadata history được giữ lâu hơn artifact, nên run có thể còn hàng lịch sử nhưng hiện thông báo artifact hết hạn.
 
@@ -52,7 +56,7 @@ Kestra có flow quản trị **lakehouse.maintenance.runtime_retention** chạy 
 
 Khi runner khởi động lại, các job/trace còn QUEUED/RUNNING được đánh dấu INTERRUPTED, giữ partial output và không tự chạy lại. Kiểm tra dữ liệu đã ghi trước khi chủ động retry.
 
-File `.pid` lưu mã tiến trình. PID cũ khi service đã dừng có thể dọn; không dùng xóa PID như cách dừng service. JupyterHub tùy chọn nay ghi proxy PID trong hub_state thay vì workspace. Nội dung notebook/table được lưu ở các vị trí riêng trong bảng trên.
+File `.pid` lưu mã tiến trình. PID cũ khi service đã dừng có thể dọn; không dùng xóa PID như cách dừng service. JupyterHub tùy chọn ghi proxy PID trong hub_state thay vì workspace. Nội dung notebook/table được lưu ở các vị trí riêng trong bảng trên.
 
 ## Backup
 

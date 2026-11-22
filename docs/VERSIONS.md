@@ -1,6 +1,6 @@
 # Phiên bản và tính tái lập
 
-Baseline code tham chiếu: V3.1.3 + hotfix e842c7a; ngày 22/11/2026. File source có thẩm quyền: compose.yaml, runtime/Dockerfile, runtime/requirements.txt, runtime/config.py, catalog/Dockerfile và runtime/labextension/package.json. Bảng này không phải kết quả kiểm kê tự động của Ubuntu đang chạy.
+Phiên bản application lấy từ RELEASE.json và package metadata trong source. File source có thẩm quyền: compose.yaml, runtime/Dockerfile, runtime/requirements.txt, runtime/config.py, catalog/Dockerfile và runtime/labextension/package.json. Bảng mô tả dependency trong source; deployment phải ghi image IDs thực tế.
 
 | Thành phần | Giá trị trong source |
 |---|---|

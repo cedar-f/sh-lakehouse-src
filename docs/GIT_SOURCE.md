@@ -1,75 +1,55 @@
-# Git source và Git workspace
+# Git source hệ thống và Git workspace
 
-## Hai repo, hai mục đích
+## Hai phạm vi độc lập
 
-Repo source ở thư mục chứa compose.yaml lưu application, scripts, tests, docs và templates. `.env`, workspace, data volumes và backups không được commit. Repo trong workspace lưu notebook/model/workflow do người dùng phát triển. Git panel Jupyter thao tác repo workspace; terminal trên host thao tác repo source.
+Repo source trên host chứa compose.yaml, application, scripts, tests, docs và template sample. Repo workspace chứa notebook/dbt/workflow của người dùng. Git panel Jupyter thao tác repo workspace; Git của host thao tác source platform.
 
-Docker bind-mount thư mục host vào `/workspace`; cùng một `.git` có thể hiện trên Windows và trong container Linux vì cùng bộ file. Git gắn với thư mục, không gắn với hệ điều hành. Không tự biến workspace thành submodule/copy nó vào source khi push platform.
+Docker bind mount cùng thư mục vào `/workspace`; `.git` hiện cả trên host và trong container vì cùng bộ file, không phụ thuộc Windows/Linux. Đặt WORKSPACE_DIR=../lakehouse-data/workspace để tách dữ liệu khỏi source. Không commit env, workspace, volumes, key hay backup vào source.
 
-```text
-lakehouse-platform/        Repo source; compose.yaml và .env riêng
-lakehouse-data/workspace/  Repo/code làm việc riêng
-```
+## Repository workspace
 
-Đặt WORKSPACE_DIR=../lakehouse-data/workspace để tách dữ liệu. Đường dẫn chỉ là ví dụ; thông tin triển khai được báo tại [HANDOVER.md](HANDOVER.md).
+Tạo repo trên GitHub trước → tab GitHub init/connect code local và commit/push đầu, hoặc clone repo có code xuống folder mới → dùng Git panel Jupyter hằng ngày. `.gitignore` được sinh tự động khi init/connect/clone. Hướng dẫn đầy đủ ở [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
 
-## Kiểm tra trước khi thao tác
+## Tạo repository source từ bộ source chưa có Git
 
-Chạy trong root source trên host, không trong terminal notebook:
-
-```bash
-git rev-parse --show-toplevel
-git branch --show-current
-git remote -v
-git status --short
-```
-
-Repo hiện đã có commit và origin; không dùng git init/đổi remote như bước update thường ngày. Nếu nhận source chưa có `.git`, làm quy trình tạo repo mới dưới đây. Source repo đang dùng là https://github.com/cedar-f/sh-lakehouse-src.git; xác nhận đúng tài khoản/repo trước push.
-
-## Tạo repo mới từ source chưa có Git
-
-Trên GitHub tạo repo trống, có thể Private, không thêm README/.gitignore/license. Theo [GitHub import local source](https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github):
+Trên GitHub tạo repository trống. Chạy tại root source của host, sau khi kiểm tra `.gitignore` đi cùng source:
 
 ```bash
 git init -b main
 git add .
 git diff --cached --name-only
 git diff --cached --stat
-git commit -m "Initial lakehouse platform source"
-git remote add origin https://github.com/OWNER/REPO.git
+git commit -m "Initial platform source"
+git remote add origin git@github.com:OWNER/REPO.git
 git push -u origin main
 ```
 
-Thay OWNER/REPO. Nếu thiếu danh tính, đặt user.name/user.email của bạn bằng git config rồi commit lại. Staged files không được có env riêng, workspace, key, dump/artifact. Ignore không gỡ file đã track; không dùng add -f để bỏ qua.
+Thay OWNER/REPO; cấu hình Git author nếu cần. Nếu source đã có `.git`/origin, không init lại hoặc đổi remote tùy ý. Kiểm tra git rev-parse --show-toplevel, git remote -v và git status trước thao tác. SSH key của host đọc source khác key trong container notebook.
 
-## Update từ máy dev sang Ubuntu
+## Cập nhật source và triển khai
 
-Ví dụ source Windows ở D:\r2-lakehouse-v3, branch main, lần sửa chỉ có docs:
+Máy phát triển, tại thư mục source:
 
-```powershell
-cd D:\r2-lakehouse-v3
-git status
-git add docs README.md CHANGELOG.md
+```bash
+git status --short
+git add PATH_TO_CHANGED_FILE
 git diff --cached --stat
-git commit -m "Document platform handover"
+git commit -m "Describe the resulting behavior"
 git push origin main
 ```
 
-Khi thay code hãy stage đúng file liên quan. Nếu commit đã được tạo sẵn, kiểm tra git log rồi chỉ push. HTTPS Credential Manager có thể mở browser login; không lưu token vào remote URL. Tham chiếu [GitHub credentials](https://docs.github.com/en/get-started/git-basics/caching-your-github-credentials-in-git).
+Stage đúng file thay đổi, kiểm tra secret trước commit. Không dùng add -f để bỏ qua ignore. Ignore không loại file đã track. Khi dùng HTTPS, dùng cơ chế credential manager/PAT thích hợp, không nhúng token vào URL.
 
-Ubuntu đã clone:
+Trên Ubuntu đã clone:
 
 ```bash
 cd ~/data/sh-lakehouse-src
 git status --short
 umask 022
 git pull --ff-only
+bash scripts/rebuild.sh
 ```
 
-Nếu worktree dirty/pull không fast-forward, xử lý branch/local edits có chủ đích, không reset hard. Docs-only không cần rebuild app. Thay runtime/Dockerfile/frontend/config cần lưu công việc rồi `bash scripts/rebuild.sh`; proxy template cần cấu hình riêng mới có hiệu lực.
+Lưu notebook/chờ job trước rebuild. Docs-only không cần rebuild; thay backend/frontend/entrypoint cần build và recreate để nhận code mới. Không dùng reset hard để bỏ local edits hoặc reset-metadata để update. Các file env/deployment local và workspace được giữ ngoài Git source.
 
-Clone Ubuntu mới/deploy key read-only: [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md). Key host để pull source khác git_ssh của analyst; Windows Git không tự dùng key Docker.
-
-## Workspace mới và chuyển workspace cũ
-
-Bootstrap tạo dbt_sample/dbt_sample_pipeline nếu thiếu; repo source không có notebook/dbt cá nhân. Muốn mang code phân tích sang, clone repo workspace riêng hoặc restore snapshot. Clone source/copy env/cùng bucket không chuyển UC metadata. Dùng [MIGRATION.md](MIGRATION.md) và [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md), dừng writer host cũ khi chuyển. Git không thay backup DB, artifact, secret và Delta data.
+Clone host mới xem [UBUNTU_DEPLOYMENT](UBUNTU_DEPLOYMENT.md). Chuyển state xem [MIGRATION](MIGRATION.md); clone source không thay restore UC metadata/data.

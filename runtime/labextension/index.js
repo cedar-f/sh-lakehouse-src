@@ -5,6 +5,7 @@ import { FileTree } from './filetree';
 import { createCompute } from './compute';
 import { createHistory } from './history';
 import { createWorkflow } from './workflow';
+import { createGitHub } from './github';
 import './style.css';
 
 const el=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
@@ -114,7 +115,7 @@ export default {
       Runs:root=>createHistory(root,{api,el,button,baseUrl:ServerConnection.makeSettings().baseUrl}),
       'Workflow Run History':root=>createHistory(root,{api,el,button,baseUrl:ServerConnection.makeSettings().baseUrl,workflow:true}),
       Workflows:root=>createWorkflow(root,{api,el,field,button,open}),
-      GitHub:async root=>{root.append(el('h2','','GitHub'),el('p','lh-muted','Use the native Git panel to clone, switch branches, review diffs, commit, pull and push. Authenticate private repositories with an SSH key stored in the persistent git_ssh volume.'));root.append(button('Clone repository',()=>app.commands.execute('git:clone'),true),button('Open terminal',()=>app.commands.execute('terminal:create-new')));root.append(el('pre','','ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519\ncat ~/.ssh/id_ed25519.pub\n# Add public key in GitHub > Settings > SSH and GPG keys\nssh -T git@github.com'));},
+      GitHub:root=>createGitHub(root,{api,el,field,button,app}),
       Notebook:async root=>{root.append(el('h2','','Run saved notebook'));const path=field(root,'Notebook path under workspace',''),params=field(root,'Parameters (JSON)','{}','textarea');path.placeholder='Folder/MyNotebook.ipynb';root.append(button('Run in background',async()=>{if(!path.value.trim())throw Error('Enter the path of a saved notebook.');const r=await api('jobs',{kind:'notebook',path:path.value.trim(),parameters:JSON.parse(params.value)});root.append(el('p','',r.id+' queued. See Runs.'));},true));}
     };
     for(const name of Object.keys(views))app.commands.addCommand('lakehouse:'+name,{label:'Lakehouse: '+name,execute:()=>open(name)});

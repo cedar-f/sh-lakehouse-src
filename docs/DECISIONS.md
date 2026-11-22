@@ -16,7 +16,7 @@
 | Bootstrap không ghi đè | Tạo prefix/sample thiếu, giữ nội dung có sẵn. Đổi template không tự cập nhật bản sample đã được người dùng sửa |
 | Reset metadata có explicit flag và preflight | Tránh đồng nhất rebuild với xóa state; không xóa R2 data. Không thay backup/restore |
 
-## Tính năng chưa có hoặc chưa nghiệm thu
+## Giới hạn và yêu cầu nghiệm thu
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -28,8 +28,8 @@
 | Notebook revision pin đầy đủ mọi file phụ khi chạy | Chưa có; snapshot chỉ có phạm vi trong source capture |
 | Tự động backup định kỳ, bản sao Delta ngoài bucket, DR SLA | Chưa cấu hình/cam kết |
 | CI/CD và reproducible dependency lock toàn bộ | Chưa có |
-| Benchmark 300 GB, upload quy mô lớn, throughput cam kết | Chưa kiểm chứng |
-| Power BI/ADF thực tế, DirectQuery/sink Delta qua ODBC | Tùy chọn, chưa nghiệm thu |
-| Ubuntu public HTTPS trên host thật | Có hướng dẫn/template, chưa nghiệm thu |
+| Benchmark 300 GB, upload quy mô lớn, throughput | Đo và chốt ngưỡng theo deployment/workload |
+| Power BI/ADF, DirectQuery/sink Delta qua ODBC | Tùy chọn; nghiệm thu driver/network/query thực tế |
+| Ubuntu public HTTPS | Cấu hình domain/firewall/proxy và nghiệm thu mỗi host |
 
 Đề xuất trong tài liệu không tự bật tính năng. Khi triển khai một mục mới, sửa code/config/test rồi cập nhật bảng trạng thái và [VALIDATION.md](VALIDATION.md); không chỉ đổi mô tả requirement thành “đã hỗ trợ”.

@@ -57,44 +57,15 @@ Giới hạn container nằm trong `.env`; thay driver memory trong Compute khô
 
 ## Git và GitHub
 
-Tab **GitHub → Clone repository** mở Git panel. Có thể clone repository có sẵn hoặc khởi tạo repository tại workspace bằng terminal. Dùng một repository gốc có cấu trúc rõ ràng, tránh tạo nhiều `.git` lồng nhau khi không chủ đích.
+Tab GitHub dùng để nối code local lên repo trống hoặc clone repo có code vào thư mục mới, thiết lập SSH, tạo `.gitignore` tự động và commit/push đầu. Sau đó dùng Git panel Jupyter để diff/stage/commit/pull/push. Xem [GITHUB_WORKSPACE.md](GITHUB_WORKSPACE.md) cho hai luồng đầy đủ.
 
-Git panel quản lý code trong workspace. Source hệ thống được quản lý bằng repo ở gốc project trên host; workspace có thể nằm ngoài source qua WORKSPACE_DIR. Quy trình tạo repo hệ thống và push nằm tại [GIT_SOURCE.md](GIT_SOURCE.md). Không dùng Git panel để đẩy source hệ thống.
-
-Với SSH, tạo key nếu chưa có:
-
-```bash
-test -f ~/.ssh/id_ed25519.pub && cat ~/.ssh/id_ed25519.pub
-```
-
-Nếu chưa có key, chạy `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519`, rồi thêm **public key** vào tài khoản GitHub. Không ghi đè key đang dùng. Kiểm tra `ssh -T git@github.com`, sau đó clone bằng SSH URL của repository. Thực hiện commit/pull/push trong Git panel; cấu hình user.name/email cho Git bằng thông tin của bạn.
-
-Repo source hệ thống bỏ qua toàn bộ workspace. Nếu tự tạo repo Git trong workspace mới, thêm `.gitignore` riêng trước khi commit:
-
-```gitignore
-.env
-.env.*
-.lakehouse/
-.ipynb_checkpoints/
-**/.ipynb_checkpoints/
-__pycache__/
-runs/
-spark-warehouse/
-metastore_db/
-derby.log
-*.pid
-**/target/
-**/logs/
-**/dbt_packages/
-```
-
-Giữ SSH private key trong `git_ssh`, không chép vào repository. Ignore không gỡ file đã track trước đó; kiểm tra danh sách staged trước commit. `.gitignore` của workspace hiện tại được giữ nguyên trong đợt tách source/data.
+Repo workspace chứa code phân tích; repo source platform được quản lý trên host theo [GIT_SOURCE.md](GIT_SOURCE.md). Private key nằm trên server, agent dùng chung với Jupyter. Sau container restart, dùng Unlock SSH key nếu key có passphrase.
 
 ## dbt
 
 Cài mới mặc định có **dbt_sample** và **dbt_sample_pipeline** khi chưa tồn tại. Để thử ngay, dùng [sample/report walkthrough](REBUILD_DBT.md). Cách dưới dành cho project của bạn; repo source không mang theo model cá nhân.
 
-Project dbt hiện tại được giữ nguyên trong workspace riêng; không được đưa vào repo source hệ thống. Khi cài mới từ Git, tự tạo thư mục `dbt/models` trong File Browser và file `dbt/dbt_project.yml`:
+Project dbt thuộc workspace riêng; không đưa vào repo source hệ thống. Để tạo project mới, tạo thư mục `dbt/models` trong File Browser và file `dbt/dbt_project.yml`:
 
 ```yaml
 name: my_lakehouse
@@ -133,6 +104,6 @@ dbt Docs là tài liệu model/columns/lineage của lần generate gần nhất
 
 ## Workflow và lịch sử
 
-Ví dụ lịch sử `variable_if_foreach_demo` nằm trong workspace máy dev, không thuộc source được clone. Bản cài mới từ Git có thể tự dựng theo tài liệu: Variables → If dùng vars → For each dùng vars → Variables trong từng lượt → SQL. Hướng dẫn từng trường và cách đổi input nằm trong [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md).
+Có thể dựng ví dụ `variable_if_foreach_demo` theo tài liệu: Variables → If dùng vars → For each dùng vars → Variables trong từng lượt → SQL. Hướng dẫn từng trường và cách đổi input nằm trong [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md).
 
 Runs và Workflow Run History là hai mục riêng. Search theo name/ID, chọn type/status, from–to trong TZ cấu hình, Apply filters, page size và Previous/Next. Trong View có code snapshot và log/cell/model/outputs. Lịch sử cũ vẫn có thể nhắc notebook/workflow đã xóa; không có nghĩa file đó còn trong workspace.

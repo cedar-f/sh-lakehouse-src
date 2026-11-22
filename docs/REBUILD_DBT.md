@@ -1,4 +1,4 @@
-# V3.1.3 — Files, khởi tạo R2 và dbt sample
+# Files, bootstrap R2, rebuild và dbt sample
 
 ## Cập nhật từ Git trên Ubuntu
 

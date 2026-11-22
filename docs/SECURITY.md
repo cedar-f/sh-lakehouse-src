@@ -50,7 +50,13 @@ Artifact endpoint chặn traversal, profiles.yml và secret-named files, có CSP
 
 UC R2 signer dùng JWT scope và thời hạn 1 giờ; API UC hiện không gắn privilege với identity người dùng. Parent credential còn có trong environment; không quảng bá đây là enforcement giữa hai host dùng chung R2 keys.
 
-## Khi nghi credential hoặc host bị lộ
+## Git credential và agent
+
+Git wizard tạo private key trên server, chỉ hiển thị public key. Passphrase chỉ tồn tại trong request/child env askpass; không persist trong file config. Dùng HTTPS/tunnel cho thao tác Unlock. Socket agent nằm trong home user (SSH dir mode 700), key mode 600; một key được mở có thể được dùng bởi process cùng user. Hệ thống tin cậy chung không cô lập secret khỏi người có quyền chạy code cùng user.
+
+GitHub host key được pin trong git_integration.py; chỉ cập nhật sau khi đối chiếu nguồn chính thức. Không tắt host verification để sửa lỗi. Preview/ignore là guardrail, không là bộ dò mọi secret; native Git vẫn cần review. Hub key theo user khác key pull source trên Ubuntu host. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
+
+## Xử lý sự cố credential/host
 
 Hạn chế inbound ở provider, giữ đường quản trị hợp lệ; dừng tác vụ ghi nếu cần. Thu hồi/rotate credential ở nơi cấp, cập nhật DB/service tương ứng, restart/invalidate sessions, rà soát executions, Git changes và object access bằng công cụ provider đang có. Project chưa có SIEM/audit trail đầy đủ hay incident automation. Ghi thời điểm, phạm vi và người xử lý; không xóa log gốc trước khi thu thập bằng chứng.
 

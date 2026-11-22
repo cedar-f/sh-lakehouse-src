@@ -1,6 +1,6 @@
 # Checklist nghiệm thu và bàn giao độc lập
 
-Người chưa đọc lịch sử chat dùng checklist này trên môi trường đích/sandbox. Ghi **PASS / FAIL / NOT RUN / NOT APPLICABLE**, thời gian theo TZ, commit và bằng chứng. Không tick PASS vì tài liệu có lệnh hoặc vì một phiên bản cũ từng chạy được.
+Checklist dùng trên môi trường đích/sandbox. Ghi **PASS / FAIL / NOT RUN / NOT APPLICABLE**, thời gian theo TZ, commit và bằng chứng trong hồ sơ nghiệm thu riêng. Một lệnh mẫu hoặc kết quả phiên bản khác không thay kiểm tra deployment hiện tại.
 
 ## Hồ sơ phiên kiểm tra
 
@@ -25,7 +25,8 @@ Thông tin thực tế chưa có trong repo cần người vận hành điền; 
 |---|---|
 | SSH trước firewall | Rule đúng port/listener, login phiên thứ hai được trước khi đóng phiên cũ |
 | OS/Docker | Linux engine/Compose hoạt động; RAM/disk đúng profile; hello-world chạy |
-| Git | Clone được đúng repo/commit bằng quyền server, không đưa secret vào remote URL |
+| Git source | Clone được đúng repo/commit bằng quyền server, không đưa secret vào remote URL |
+| Git workspace | Luồng init/clone tự tạo ignore; encrypted key unlock; commit/push đầu rồi Git native commit/push tiếp; key được giữ qua recreate |
 | Env | Root .env được ignore, mode 600, đúng credential/bucket/TZ, không chứa placeholder |
 | Bind mount | Workspace nằm đúng host path và trong container là /workspace |
 | Build/permission | Không có PermissionError của analyst; image regression riêng đã có bằng chứng |
@@ -93,4 +94,4 @@ HTTPS: certificate đúng hostname, login thành công, notebook WebSocket/termi
 
 Restore drill: dùng snapshot đã xác minh, host/project/workspace đích sạch và không có writer cũ. Theo [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md), xác nhận catalog/table/data checksum hoặc aggregate đã biết, notebook/workflow và artifact. Ghi RTO đo được, snapshot age và các data không được backup.
 
-Cuối cùng người nhận tự thực hiện: clone → cấu hình → start → sample → report → backup/restore thử → tìm lỗi theo log. Ghi các câu hỏi còn cần người tạo hệ thống giải thích và bổ sung docs. Chỉ kết luận “bàn giao độc lập đạt” sau khi người nhận hoàn thành; hiện baseline chưa có biên bản nghiệm thu này.
+Người vận hành tự thực hiện clone → cấu hình → start → sample → report → backup/restore thử → chẩn đoán lỗi theo log. Ghi ngoại lệ và câu hỏi còn thiếu trong hồ sơ nghiệm thu, cập nhật hướng dẫn khi contract thay đổi. Chỉ ký nghiệm thu khi các mục bắt buộc có kết quả và người chịu trách nhiệm.

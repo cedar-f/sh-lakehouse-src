@@ -21,6 +21,7 @@ COPY . /opt/lakehouse/
 # Git checkouts under a restrictive host umask can contain root-only files.
 # Keep image code root-owned, but readable/traversable by the runtime user.
 RUN chmod -R a+rX /opt/lakehouse /usr/local/share/jupyter/labextensions/@lakehouse/workspace \
+ && chmod 0755 /opt/lakehouse/git_askpass.py \
  && mkdir -p /etc/jupyter/jupyter_server_config.d /home/analyst/.ipython/profile_default/startup \
  && printf '{"ServerApp":{"jpserver_extensions":{"lakehouse_server":true}}}' > /etc/jupyter/jupyter_server_config.d/lakehouse.json \
  && cp /opt/lakehouse/startup.py /home/analyst/.ipython/profile_default/startup/00-lakehouse.py \

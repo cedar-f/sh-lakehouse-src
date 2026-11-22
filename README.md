@@ -9,10 +9,10 @@ Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, S
 | Ubuntu từ Git, copy env, SSH/public | [UBUNTU_DEPLOYMENT](docs/UBUNTU_DEPLOYMENT.md) |
 | Windows, R2, RAM/CPU | [INSTALLATION](docs/INSTALLATION.md), [ENVIRONMENT](docs/ENVIRONMENT.md), [RESOURCE_PLANNING](docs/RESOURCE_PLANNING.md) |
 | dbt sample/report, Delete, rebuild | [REBUILD_DBT](docs/REBUILD_DBT.md) |
-| Notebook/SQL/workflow | [USER_GUIDE](docs/USER_GUIDE.md), [RUNS_WORKFLOWS](docs/RUNS_WORKFLOWS.md) |
+| Notebook/SQL/workflow | [USER_GUIDE](docs/USER_GUIDE.md), [RUNS_WORKFLOWS](docs/RUNS_WORKFLOWS.md), [GitHub workspace](docs/GITHUB_WORKSPACE.md) |
 | Bảo trì code/API | [DEVELOPMENT](docs/DEVELOPMENT.md), [API](docs/API.md), [ARCHITECTURE](docs/ARCHITECTURE.md) |
 | Vận hành/backup/chuyển host | [OPERATIONS](docs/OPERATIONS.md), [DISASTER_RECOVERY](docs/DISASTER_RECOVERY.md) |
-| Trạng thái/nghiệm thu | [VALIDATION](docs/VALIDATION.md), [ACCEPTANCE](docs/ACCEPTANCE.md), [CHANGELOG](CHANGELOG.md) |
+| Trạng thái/nghiệm thu | [VALIDATION](docs/VALIDATION.md), [ACCEPTANCE](docs/ACCEPTANCE.md) |
 
 ## Phạm vi quan trọng
 
@@ -24,4 +24,4 @@ Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, S
 
 Repo gồm source/template, không có notebook/dbt cá nhân, `.env`, database volume hay backup. Bootstrap tạo dbt_sample/dbt_sample_pipeline khi thiếu, không ghi đè hoặc tự chạy; tắt bằng SEED_SAMPLE_DBT=false.
 
-Init mới: Ubuntu `bash scripts/init.sh`; Windows `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init.ps1`. Điền env/chọn RAM trước start; hướng dẫn và điều kiện nghiệm thu trong docs, không cần lịch sử chat.
+Init mới: Ubuntu `bash scripts/init.sh`; Windows `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init.ps1`. Điền env/chọn RAM trước start; hướng dẫn theo vai trò và điều kiện nghiệm thu nằm trong docs.
