@@ -83,3 +83,43 @@ Giữ `.env` và SSH key riêng, mã hóa và kiểm soát truy cập. Nếu b�
 4. Service runtime-init di chuyển run cũ từ workspace sang lakehouse_data có kiểm tra hash. Local Hive metastore/warehouse chỉ được lưu chuyển khi đã xác nhận không có bảng local. Không tự xóa các thư mục dữ liệu còn chưa rõ nguồn gốc.
 
 Với Compose Hub, dùng nhất quán cả compose.yaml và compose.hub.yaml khi start/stop/recreate. Chi tiết migration và thứ tự backup/restore nằm trong [MIGRATION.md](MIGRATION.md).
+
+## Runbook sự cố theo dấu hiệu
+
+| Dấu hiệu | Kiểm tra trước | Hướng xử lý |
+|---|---|---|
+| Không SSH được sau firewall | Console, listener thực tế, UFW và provider/router | Mở đúng SSH port trước; login phiên mới, không reset firewall toàn bộ |
+| Local UI được nhưng public không | Bind 127/0.0, upstream rules/NAT/DNS | Theo [Ubuntu deployment](UBUNTU_DEPLOYMENT.md); UFW không đủ để kết luận Docker port đã private |
+| UI không login / Kestra prompt | Đúng env/token/email; Basic auth/cookie; service logs | Không tắt auth để chữa login; nếu secret đổi, recreate process liên quan |
+| Bootstrap fail | `docker compose logs --tail=100 bootstrap catalog` | PermissionError → hotfix image; Unauthorized → R2 fields/permission/clock; không reset để chữa auth |
+| SQL STARTING/FAILED | Compute status, `docker compose logs --tail=100 sql catalog` | Catalog/Maven/R2/JVM readiness; Save & Restart đúng scope sau sửa config |
+| Container restart / OOM | docker stats, free -h, State.OOMKilled, logs JVM/Python | Giảm kernel/job, kiểm driver heap vs cap và config đã lưu; không tăng đồng loạt vượt host |
+| Disk đầy | df -h, docker system df, artifact cleanup preview, local backups | Dọn eligible artifacts hoặc snapshot local đã xác minh; không prune DB/key/warehouse tùy tiện |
+| Table có trong catalog nhưng đọc lỗi Delta | Location, R2 keys, _delta_log, credential | Dữ liệu R2 bị xóa không sửa được bằng refresh; dùng kế hoạch data recovery |
+| Workflow FAILED nhưng thiếu chi tiết ở Kestra | Workflow Run History và linked Run IDs | Advanced flow chạy trong runner; xem Models/Cells/Logs của run con |
+| History còn nhưng artifact 404 | artifacts_expired và retention | Đây có thể là hết retention; metadata history không bảo đảm giữ file |
+
+## Kiểm tra vận hành và owner
+
+Hằng ngày hoặc theo lịch đã thống nhất: service status/SQL SELECT 1, RAM available, disk Docker/temp, backup gần nhất, workflow failures và log retention. Chưa có hệ thống metrics/alert tập trung trong repo; người vận hành phải ghi người theo dõi và phương thức báo lỗi trong HANDOVER.
+
+```bash
+docker compose ps -a
+docker stats --no-stream
+free -h
+df -h
+docker system df
+docker compose logs --tail=100 sql runner kestra
+```
+
+Kiểm tra sau reboot: Docker service chạy, containers đạt readiness, one-shot đã kết thúc thành công và Kestra login/query thực sự được. unless-stopped không hứa bật lại container đã bị chủ động stop trước reboot. Job bị gián đoạn không tự replay; kiểm side effects trước retry.
+
+Ngưỡng ban đầu như available RAM thấp hơn 1–2 GiB hoặc Docker filesystem gần đầy là tín hiệu điều tra, không SLA/cap đã enforce. Theo dõi workload đại diện và điều chỉnh threshold có ghi nhận.
+
+## Upgrade và rollback có kiểm soát
+
+Ghi commit/image IDs, giữ cấu hình private và snapshot phù hợp; worktree sạch trước git pull --ff-only. Lưu notebook/chờ job, rebuild theo script, nghiệm thu query/dbt/UI rồi mới coi deployment đạt. Proxy/Hub cần dùng cùng Compose layers; COMPOSE_FILE/proxy local là phần config bàn giao.
+
+Rollback code và restore state là hai thao tác khác nhau. Hướng dẫn điều kiện/command, backup scope, diễn tập restore và giới hạn khi mất Delta nằm trong [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md). Snapshot hiện tại không nhân bản toàn warehouse; backup và cron chưa tự bật. Không dùng reset-metadata như bước upgrade.
+
+Các thao tác table cleanup/VACUUM cần chính sách Delta và reader retention riêng. DROP TABLE/location external có semantics khác managed; kiểm metadata và storage sau thao tác, không suy ra free disk/object chỉ từ việc table biến mất trong Catalog.

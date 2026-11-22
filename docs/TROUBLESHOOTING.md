@@ -50,7 +50,7 @@ Project cần .dbtignore; runner tự thêm quy tắc bỏ qua `.ipynb_checkpoin
 
 ## Workflow không thấy file / không thấy sample cũ
 
-Đợt cleanup giữ duy nhất `variable_if_foreach_demo`. Notebook job dùng path tương đối dưới workspace của bạn. Lưu notebook trước khi gọi; cập nhật Workspace path của node khi đổi tên/chuyển file. Refresh browser nếu dropdown workflow còn danh sách cache cũ. Lịch sử có thể vẫn có execution của định nghĩa đã xóa.
+Source không chứa workspace cá nhân. Bootstrap cài mới tạo `dbt_sample_pipeline` nếu SEED_SAMPLE_DBT=true và file còn thiếu; ví dụ `variable_if_foreach_demo` trong workspace dev cũ không được copy từ Git. Dựng lại theo [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md) nếu cần. Notebook job dùng path tương đối dưới workspace của bạn. Lưu notebook trước khi gọi; cập nhật Workspace path của node khi đổi tên/chuyển file. Refresh browser nếu dropdown workflow còn danh sách cache cũ. Lịch sử có thể vẫn có execution của định nghĩa đã xóa.
 
 ## If/For each báo biến không tồn tại
 

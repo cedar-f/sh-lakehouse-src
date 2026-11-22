@@ -1,0 +1,6 @@
+# Optional single-user Jupyter proxy config. Paths resolve from compose.yaml.
+# Copy jupyter-proxy.json into deploy-local/ and configure its hostname first.
+services:
+  notebook:
+    volumes:
+      - ./deploy-local/jupyter-proxy.json:/etc/jupyter/jupyter_server_config.d/proxy.json:ro

@@ -1,0 +1,7 @@
+{
+  "ServerApp": {
+    "trust_xheaders": true,
+    "allow_remote_access": false,
+    "local_hostnames": ["localhost", "lakehouse.example.com"]
+  }
+}

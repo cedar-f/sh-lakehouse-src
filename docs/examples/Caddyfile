@@ -1,0 +1,8 @@
+# Replace both example hostnames with DNS names you control.
+lakehouse.example.com {
+    reverse_proxy 127.0.0.1:8888
+}
+
+kestra.example.com {
+    reverse_proxy 127.0.0.1:8082
+}

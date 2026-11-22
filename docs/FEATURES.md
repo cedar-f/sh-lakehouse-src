@@ -1,5 +1,7 @@
 # Tính năng và kiến trúc
 
+Kiến trúc chi tiết, sequence và persistence: [ARCHITECTURE.md](ARCHITECTURE.md). Ranh giới bảo mật: [SECURITY.md](SECURITY.md).
+
 ## Các thành phần
 
 | Thành phần | Vai trò | Lưu trữ chính |
@@ -29,7 +31,7 @@ flowchart LR
 
 - Các mục Catalog, Files, Compute, SQL, dbt, Runs, Workflows, Workflow Run History, GitHub và Notebook mở thành tab trong vùng chính. Tab mới được chọn ngay; đóng/mở lại giữ nội dung đang nhập trong phiên trình duyệt.
 - **Catalog:** tạo catalog/schema, liệt kê table/volume, xem columns/location, preview và mở truy vấn thành notebook. SQL mặc định dùng catalog/schema do bạn cấu hình; bảng mới qua UC connector được đăng ký vào UC.
-- **Files:** cây thư mục R2; tải file, upload nhiều file dưới incoming/, progress theo part, hủy và tiếp tục upload cùng file. Phần dữ liệu bảng warehouse/ chỉ đọc qua file browser này.
+- **Files:** cây R2, download/upload nhiều file trong incoming/, progress theo part, cancel/resume. Delete file/thư mục con có confirmation, status và partial errors; root incoming, warehouse và backup được bảo vệ. Xem [REBUILD_DBT.md](REBUILD_DBT.md).
 - **Compute:** status, CPU threads, memory, shuffle, default catalog/schema, Spark config và Save & Restart Spark cho SQL/dbt, kernel được chọn hoặc cả hai.
 - **Notebook/SQL:** Spark và %%sql được nạp khi kernel khởi động; kết quả truy vấn hiển thị dạng bảng. SQL editor và preview giới hạn 1000 dòng.
 - **GitHub:** Git panel cho clone/branch/diff/commit/pull/push; SSH key ở volume riêng.

@@ -1,20 +1,27 @@
 # R2 Lakehouse V3.1.3
 
-Lakehouse tự host bằng Docker, dùng Spark/Delta Lake, Unity Catalog OSS, R2, dbt và Kestra; giao diện chính là JupyterLab với extension Lakehouse.
+Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, Spark/Delta Lake, Unity Catalog OSS/PostgreSQL, Cloudflare R2, dbt và Kestra. Source dùng chung cho Ubuntu 22.04 host và Windows 11 dev.
 
-**Tài liệu bắt đầu tại [docs/README.md](docs/README.md).**
+**Người mới bắt đầu tại [docs/HANDOVER.md](docs/HANDOVER.md).** Mục lục theo vai trò: [docs/README.md](docs/README.md).
 
-V3.1.3: Delete file/folder trong incoming, bootstrap prefix R2 khi thiếu và project/workflow dbt sample. Hướng dẫn cập nhật từ Git, rebuild/reset và xem report: [docs/REBUILD_DBT.md](docs/REBUILD_DBT.md).
+| Nhu cầu | Tài liệu |
+|---|---|
+| Ubuntu từ Git, copy env, SSH/public | [UBUNTU_DEPLOYMENT](docs/UBUNTU_DEPLOYMENT.md) |
+| Windows, R2, RAM/CPU | [INSTALLATION](docs/INSTALLATION.md), [ENVIRONMENT](docs/ENVIRONMENT.md), [RESOURCE_PLANNING](docs/RESOURCE_PLANNING.md) |
+| dbt sample/report, Delete, rebuild | [REBUILD_DBT](docs/REBUILD_DBT.md) |
+| Notebook/SQL/workflow | [USER_GUIDE](docs/USER_GUIDE.md), [RUNS_WORKFLOWS](docs/RUNS_WORKFLOWS.md) |
+| Bảo trì code/API | [DEVELOPMENT](docs/DEVELOPMENT.md), [API](docs/API.md), [ARCHITECTURE](docs/ARCHITECTURE.md) |
+| Vận hành/backup/chuyển host | [OPERATIONS](docs/OPERATIONS.md), [DISASTER_RECOVERY](docs/DISASTER_RECOVERY.md) |
+| Trạng thái/nghiệm thu | [VALIDATION](docs/VALIDATION.md), [ACCEPTANCE](docs/ACCEPTANCE.md), [CHANGELOG](CHANGELOG.md) |
 
-- [Đưa source hệ thống lên GitHub, tách workspace riêng](docs/GIT_SOURCE.md)
-- [Tính năng và giới hạn](docs/FEATURES.md)
-- [Cài đặt Windows 11 / Ubuntu 22.04](docs/INSTALLATION.md)
-- [Cấu hình .env, R2, RAM/CPU và timezone](docs/ENVIRONMENT.md)
-- [Sử dụng notebook, SQL, Catalog, Files, Git và dbt](docs/USER_GUIDE.md)
-- [Workflow, run history và ví dụ Variables / If / For each](docs/RUNS_WORKFLOWS.md)
-- [Vận hành, cleanup và backup](docs/OPERATIONS.md)
-- [Xử lý lỗi](docs/TROUBLESHOOTING.md)
+## Phạm vi quan trọng
 
-Repository này chỉ lưu source dựng hệ thống và template dbt mẫu. `workspace/`, `.env`, database và backup được Git bỏ qua. Trên máy dev, workspace hiện tại cùng Git cũ đã được giữ riêng tại `../r2-lakehouse-data/workspace`, cấu hình qua `WORKSPACE_DIR`. Cài mới sinh project `dbt_sample` và flow `dbt_sample_pipeline` khi chưa có; có thể tắt bằng SEED_SAMPLE_DBT=false. Không chứa code cá nhân của workspace đang dùng.
+- Spark local với JVM riêng cho SQL, từng kernel và notebook nền; chưa shared cluster/autoscaling.
+- UC metadata ở PostgreSQL. R2 chứa Delta, incoming và snapshot; cùng bucket không tự kế thừa catalog.
+- UC authorization tắt, SQL NOSASL; miền người dùng tin cậy. Public access theo [SECURITY](docs/SECURITY.md).
+- Snapshot script không nhân bản toàn bộ Delta data; cần data backup độc lập.
+- Phần chưa nghiệm thu/triển khai được ghi tại [REQUIREMENTS](docs/REQUIREMENTS.md).
 
-Khởi tạo Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init.ps1`; Ubuntu: `bash scripts/init.sh`. Điền `.env` theo tài liệu trước khi chạy script start tương ứng.
+Repo gồm source/template, không có notebook/dbt cá nhân, `.env`, database volume hay backup. Bootstrap tạo dbt_sample/dbt_sample_pipeline khi thiếu, không ghi đè hoặc tự chạy; tắt bằng SEED_SAMPLE_DBT=false.
+
+Init mới: Ubuntu `bash scripts/init.sh`; Windows `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init.ps1`. Điền env/chọn RAM trước start; hướng dẫn và điều kiện nghiệm thu trong docs, không cần lịch sử chat.

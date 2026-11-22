@@ -35,3 +35,7 @@ Restore kiểm checksum trước, phục hồi database, workspace, runtime và 
 Snapshot tạo trước đợt cleanup có thể khôi phục lại ví dụ cũ cùng code tại thời điểm snapshot. Chọn đúng snapshot và rà soát workspace sau khi restore. Thay code ứng dụng không tự thay nội dung một backup đã có.
 
 Đây là script cho single-user Compose mặc định. Nếu bật JupyterHub, cần lưu thêm hai volume `hub_state`, `hub_home` và chạy các lệnh bằng cả hai file compose. Chúng chứa tài khoản/password hash và dữ liệu home, phải lưu như secret.
+
+## Tham chiếu bàn giao
+
+Phạm vi chính xác của snapshot, file/secret không được backup, archive restore ghi đè nhưng không xóa file thừa, rollback code và data loss nằm trong [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md). Làm [ACCEPTANCE.md](ACCEPTANCE.md) sau khi chuyển; ghi commit/image IDs và giữ host cũ dừng cho tới lúc nghiệm thu. Dữ liệu Delta trên R2 không được nhân bản bởi script backup metadata.

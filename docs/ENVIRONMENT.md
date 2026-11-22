@@ -121,3 +121,33 @@ docker compose up -d --force-recreate
 ```
 
 Lưu notebook trước thao tác recreate. Đổi mã ứng dụng/Dockerfile cần build image lại; đổi token trên browser cần đăng nhập lại. Với Spark config trong Compute, dùng Save & Restart Spark để chỉ thay các Spark process đã chọn. Xem thứ tự áp dụng và lỗi thường gặp trong [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Ưu tiên cấu hình và các biến nội bộ
+
+Đọc [RESOURCE_PLANNING.md](RESOURCE_PLANNING.md) trước khi dùng default 4g/6g trên host 16 GB. Tài liệu phân biệt profile cân bằng đang hỗ trợ với proposal memory riêng theo service chưa triển khai.
+
+Thứ tự: giá trị mặc định trong code → env process từ Compose → `.lakehouse/spark.json` ghi đè các Spark setting đã lưu. Kernel đang sống giữ SparkContext/config của nó; Save & Restart scope không chọn kernel đó sẽ không làm nó nhận cấu hình mới. User code còn có thể thay các SQL setting cho session của mình.
+
+Không thêm các biến như SQL_SPARK_MEMORY/NOTEBOOK_SPARK_MEMORY rồi kỳ vọng app tự nhận; hiện không có mapping đó trong code. Container cap và driver_memory là hai lớp khác nhau.
+
+Các biến sau do Compose/entrypoint đặt, thường không cần thêm vào env riêng:
+
+| Biến | Default Compose / vai trò |
+|---|---|
+| WORKSPACE_ROOT | Code fallback /workspace; bind mount hiện cố định /workspace |
+| RUNS_ROOT | /var/lib/lakehouse/runs |
+| RUNTIME_ROOT | /var/lib/lakehouse/runtime |
+| UC_URL | http://catalog:8080 |
+| SQL_HOST | sql |
+| RUNNER_URL | http://runner:8765 |
+| KESTRA_URL | http://kestra:8080 |
+| LAKEHOUSE_SERVICE | notebook/sql/runner cho temp/warehouse riêng |
+| PYTHONPATH | /opt/lakehouse |
+| PYSPARK_PYTHON | /usr/bin/python3 |
+| SPARK_LOCAL_IP | 127.0.0.1; Spark chạy local |
+
+Đổi các đường dẫn nội bộ cần đồng bộ mounts/permission/artifact serving; không đổi chỉ một env để di chuyển runtime database. Script notebook background còn dùng LAKEHOUSE_PARAMETERS/LAKEHOUSE_RUN_DIR theo run, không phải global config.
+
+**Biến của Docker Compose**, khác app variables: COMPOSE_FILE cho phép dùng override, ví dụ `compose.yaml:docs/examples/compose.proxy.yaml` trên Ubuntu. Chuẩn bị file local theo [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md) trước khi bật. Đổi project name bằng CLI/env thay namespace named volumes; kiểm kết quả `docker compose config`/ps và không coi volume mới trống là dữ liệu cũ đã mất.
+
+Không source .env thành shell script. Tránh in toàn bộ `docker compose config` hoặc Docker inspect environment vào log bàn giao vì có secret đã được interpolate; dùng config --quiet và inspect field cụ thể.

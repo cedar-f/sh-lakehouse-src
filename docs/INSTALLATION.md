@@ -1,5 +1,7 @@
 # Cài đặt trên Windows 11 và Ubuntu 22.04
 
+Ubuntu sạch từ Git, SCP env, SSH/UFW và public HTTP/HTTPS: dùng [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md). Trang này tập trung setup Windows và tóm tắt nền tảng hai OS. RAM 16 GB xem [RESOURCE_PLANNING.md](RESOURCE_PLANNING.md).
+
 Ứng dụng dùng Linux containers trên cả hai hệ điều hành. Windows 11 dùng Docker Desktop/WSL 2; Ubuntu dùng Docker Engine và Compose plugin. Mã Spark, UC, dbt, Kestra và cấu trúc volume giống nhau; shell khởi động và nơi Docker giữ dữ liệu khác nhau.
 
 ## 1. Chuẩn bị chung

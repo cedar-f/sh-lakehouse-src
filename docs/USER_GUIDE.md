@@ -45,6 +45,10 @@ Mở **Files**, bấm thư mục để mở/thu gọn cây. Load more tải tran
 
 File CSV/JSON/Parquet upload vẫn là file; notebook cần đọc file rồi ghi thành Delta để xuất hiện như table. Đường dẫn Spark dùng `s3://<bucket>/incoming/...` với format phù hợp. Thao tác ghi bảng qua Spark; không chỉnh thủ công nội dung `warehouse/` bằng file browser.
 
+Mỗi file/thư mục con trong incoming có **Delete**; folder yêu cầu nhập full path. Đây là xóa vĩnh viễn, có status/counter và Stop after current batch; các phần đã xóa không được undo. Warehouse/backup/root incoming không có Delete. Hướng dẫn chi tiết: [REBUILD_DBT.md](REBUILD_DBT.md).
+
+![Files sau thao tác xóa trong UI fixture](assets/files-delete-3.1.3.png)
+
 ## Compute
 
 Chỉnh CPU, driver memory, shuffle, default catalog/schema và Extra Spark config. Chọn Restart scope: SQL/dbt, notebook được đánh dấu, hoặc cả hai; bấm Save & Restart Spark, theo dõi tới READY/FAILED. Restart kernel làm mất biến/DataFrame trong RAM và ngắt query của kernel đó; notebook đã lưu và table vẫn được giữ.
@@ -88,6 +92,8 @@ Giữ SSH private key trong `git_ssh`, không chép vào repository. Ignore khô
 
 ## dbt
 
+Cài mới mặc định có **dbt_sample** và **dbt_sample_pipeline** khi chưa tồn tại. Để thử ngay, dùng [sample/report walkthrough](REBUILD_DBT.md). Cách dưới dành cho project của bạn; repo source không mang theo model cá nhân.
+
 Project dbt hiện tại được giữ nguyên trong workspace riêng; không được đưa vào repo source hệ thống. Khi cài mới từ Git, tự tạo thư mục `dbt/models` trong File Browser và file `dbt/dbt_project.yml`:
 
 ```yaml
@@ -121,8 +127,12 @@ select current_date() as run_date
 
 Chạy build sẽ tạo/ghi model table thật vào catalog/schema đích. Lưu model của bạn vào project trước khi chạy. Runner tự giữ quy tắc bỏ qua `.ipynb_checkpoints` trong `.dbtignore`.
 
+dbt Docs là tài liệu model/columns/lineage của lần generate gần nhất; kết quả run/test ở **Runs**, chọn đúng build run → View.
+
+![dbt Docs của starter, catalog rỗng trong kiểm tra offline](assets/dbt-starter-docs-3.1.3.png)
+
 ## Workflow và lịch sử
 
-Trong workspace hiện tại đã giữ `variable_if_foreach_demo`; bản cài mới từ Git có thể tự dựng theo tài liệu: Variables → If dùng vars → For each dùng vars → Variables trong từng lượt → SQL. Hướng dẫn từng trường và cách đổi input nằm trong [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md).
+Ví dụ lịch sử `variable_if_foreach_demo` nằm trong workspace máy dev, không thuộc source được clone. Bản cài mới từ Git có thể tự dựng theo tài liệu: Variables → If dùng vars → For each dùng vars → Variables trong từng lượt → SQL. Hướng dẫn từng trường và cách đổi input nằm trong [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md).
 
 Runs và Workflow Run History là hai mục riêng. Search theo name/ID, chọn type/status, from–to trong TZ cấu hình, Apply filters, page size và Previous/Next. Trong View có code snapshot và log/cell/model/outputs. Lịch sử cũ vẫn có thể nhắc notebook/workflow đã xóa; không có nghĩa file đó còn trong workspace.
