@@ -86,4 +86,3 @@ PY
 
 bash scripts/rebuild.sh
 
-docker compose exec -T registry python3 /opt/lakehouse/registry_service.py sync
