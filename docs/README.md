@@ -24,6 +24,7 @@ Bộ tài liệu định nghĩa hệ thống, giải thích cơ chế và hướ
 | [DECISIONS.md](DECISIONS.md) | Lý do, đánh đổi, việc chưa thực hiện |
 | [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md) | Ubuntu sạch, SSH/UFW, Git, SCP env, Docker, tunnel/HTTP/HTTPS |
 | [INSTALLATION.md](INSTALLATION.md) | Windows 11 và nền tảng hai OS |
+| [CATALOG_REGISTRY.md](CATALOG_REGISTRY.md) | Đồng bộ metadata lên R2, startup replay, conflict/pending và phạm vi managed |
 | [ENVIRONMENT.md](ENVIRONMENT.md) | Biến env, ưu tiên config, áp dụng thay đổi |
 | [RESOURCE_PLANNING.md](RESOURCE_PLANNING.md) | Ngân sách 16/32 GB, nhiều JVM, đo tải |
 | [SECURITY.md](SECURITY.md) | Auth, ports, secret và public exposure |

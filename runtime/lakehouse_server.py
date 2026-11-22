@@ -36,6 +36,13 @@ async def runner_request(method,path,payload=None):
             raise ValueError(str(message))
         return response.json()
 
+async def registry_request(method):
+    async with httpx.AsyncClient(timeout=120) as client:
+        response=await client.request(method,'http://registry:8080/registry/'+('status' if method=='GET' else 'sync'),
+            headers={'X-Runner-Token':os.environ['RUNNER_TOKEN']})
+        if response.is_error:raise ValueError('Registry is pending; check docker compose logs registry before resetting metadata')
+        return response.json()
+
 class API(JupyterHandler):
     def finish_json(self,value,status=200):
         self.set_status(status); self.set_header('Content-Type','application/json'); self.set_header('Cache-Control','no-store')
@@ -95,6 +102,7 @@ class API(JupyterHandler):
             elif path.startswith('cluster/restarts/'):
                 result=self.restarts.snapshot(path.rsplit('/',1)[1])
             elif path=='preferences':result={'timezone':timezone_name()}
+            elif path=='catalog-registry':result=await registry_request('GET')
             elif path=='git/status':result=await asyncio.to_thread(git_integration.status,self.get_argument('path','.'),ROOT)
             elif path=='git/preview':result=await asyncio.to_thread(git_integration.preview,self.get_argument('path','.'),ROOT)
             elif path=='maintenance' or path.startswith(('history/','runs/','workflow-history/','docs/')):
@@ -130,7 +138,8 @@ class API(JupyterHandler):
                     UploadId=meta['upload_id'],PartNumber=number,Body=self.request.body)
                 return self.finish_json({'ETag':result['ETag'],'PartNumber':number})
             data=json.loads(self.request.body or '{}')
-            if path.startswith('git/'):
+            if path=='catalog-registry/sync':result=await registry_request('POST')
+            elif path.startswith('git/'):
                 result=await asyncio.to_thread(git_integration.action,path[4:],data,ROOT)
             elif path in ('catalogs','schemas'):
                 identifier(data['name'])

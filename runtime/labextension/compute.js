@@ -55,5 +55,23 @@ export async function createCompute(root,{api,el,field,button}){
   const maintenance=el('details'),maintenanceSummary=el('summary','','Artifact retention & cleanup'),cleanupStatus=el('div','lh-status');maintenance.append(maintenanceSummary,el('p','lh-muted','Automatic cleanup runs hourly. Table data, catalog metadata, warehouses and active runs are excluded. Configure retention in .env.'));
   function describe(r){cleanupStatus.textContent=`Retention: ${r.retention_days} days · quota: ${r.storage_max_gb} GB · history: ${r.history_retention_days} days\n${r.apply?'Removed':'Eligible'}: ${r.runs.length} runs, ${(r.bytes/1024/1024).toFixed(1)} MB · ${r.temporary.length} temporary directories`;}
   maintenance.append(button('Preview cleanup',async()=>describe(await api('maintenance'))),button('Clean eligible artifacts now',async()=>describe(await api('maintenance',{}))),cleanupStatus);root.append(maintenance);
+  const registry=el('section','lh-card'),registryStatus=el('div','lh-status');
+  registry.append(el('h3','','Catalog registry on R2'),el('p','lh-muted','Portable catalog/schema definitions, comments, properties, external volumes and table inventory. Check synchronization before resetting local metadata.'),registryStatus);
+  let registryZone='UTC';
+  function showRegistry(r){
+    registryStatus.replaceChildren();
+    registryStatus.classList.toggle('lh-error',Boolean(r.error)||Boolean(r.unrestored?.length)||Boolean(r.nonportable?.length));
+    if(!r.enabled){registryStatus.textContent='Registry disabled. Local UC metadata has no automatic portable recovery.';return;}
+    const when=r.last_sync?new Date(r.last_sync*1000).toLocaleString(undefined,{timeZone:registryZone})+' '+registryZone:'Not synchronized in this process';
+    registryStatus.append(el('p','',`${r.ready?'Synchronized':'Pending'} · s3://${r.bucket}/${r.key} · ${when}`));
+    for(const [kind,count] of Object.entries(r.counts||{}))registryStatus.append(el('div','',`${kind}: ${count}`));
+    if(r.error)registryStatus.append(el('p','lh-error',r.error));
+    for(const item of r.unrestored||[])registryStatus.append(el('p','lh-error',`${item.kind} ${item.name}: not restored — ${item.reason}`));
+    const missing=new Set((r.unrestored||[]).map(item=>item.kind+':'+item.name));
+    for(const item of r.nonportable||[])if(!missing.has(item.kind+':'+item.name))registryStatus.append(el('p','lh-error',`${item.kind} ${item.name}: inventory saved, but requires separate recovery after a local reset.`));
+  }
+  async function refreshRegistry(){try{const [r,p]=await Promise.all([api('catalog-registry'),api('preferences')]);registryZone=p.timezone;showRegistry(r);}catch(e){registryStatus.textContent=e.message;registryStatus.classList.add('lh-error');}}
+  registry.append(button('Refresh registry status',refreshRegistry),button('Sync registry now',async()=>{showRegistry(await api('catalog-registry/sync',{}));}));root.append(registry);
+  await refreshRegistry();
   if(config.restart){active=config.restart;render(active);if(active.state==='RESTARTING')void monitor(active);}
 }

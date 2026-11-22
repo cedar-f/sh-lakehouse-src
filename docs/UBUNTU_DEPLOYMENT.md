@@ -152,7 +152,7 @@ Không source .env trong shell; không để umask 077 kéo dài trong phiên Gi
 
 ## 5. Bật stack và kiểm tra qua tunnel trước
 
-Đây là cài mới source/state. Nếu chuyển host để giữ catalog/table cũ, làm [MIGRATION.md](MIGRATION.md) thay vì coi cùng R2 bucket là đã migrate. Dừng writer host cũ trước khi chuyển quyền ghi.
+Đây là cài mới source/state. Nếu chuyển host để giữ catalog/table cũ, làm [MIGRATION.md](MIGRATION.md): cùng bucket/prefix chỉ đủ cho portable registry đã sync và các object được hỗ trợ, không đủ cho full UC/workspace state. Dừng writer host cũ trước khi chuyển quyền ghi.
 
 ```bash
 cd ~/data/sh-lakehouse-src
@@ -161,7 +161,7 @@ docker compose ps -a
 docker compose logs --tail=100 bootstrap
 ```
 
-bootstrap/runtime-init Exited (0) là bình thường; postgres/catalog/notebook/sql/runner cần healthy. Kestra cần kiểm tra UI/login riêng. Nếu R2 Unauthorized, cập nhật credential; không reset metadata để chữa auth. Script build cần thời gian và kết nối SSH giữ mở đến khi xong.
+bootstrap/runtime-init Exited (0) là bình thường; postgres/catalog/registry/notebook/sql/runner cần healthy. Registry replay hoàn tất trước bootstrap; lỗi registry xem CATALOG_REGISTRY.md. Kestra cần kiểm tra UI/login riêng. Nếu R2 Unauthorized, cập nhật credential; không reset metadata để chữa auth. Script build cần thời gian và kết nối SSH giữ mở đến khi xong.
 
 Trên Windows dùng tunnel (đóng bản Windows cũ hoặc chọn local port khác nếu port bị chiếm):
 

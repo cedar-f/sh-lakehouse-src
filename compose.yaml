@@ -12,7 +12,8 @@ x-runtime: &runtime
     TZ: ${TZ:-Asia/Ho_Chi_Minh}
     RUNS_ROOT: /var/lib/lakehouse/runs
     RUNTIME_ROOT: /var/lib/lakehouse/runtime
-    UC_URL: http://catalog:8080
+    UC_URL: http://registry:8080
+    UC_UPSTREAM_URL: http://catalog:8080
     SQL_HOST: sql
     RUNNER_URL: http://runner:8765
     KESTRA_URL: http://kestra:8080
@@ -83,8 +84,22 @@ services:
     restart: 'no'
     command: [python3, /opt/lakehouse/bootstrap.py]
     depends_on:
+      registry: {condition: service_healthy}
+      runtime-init: {condition: service_completed_successfully}
+
+  registry:
+    <<: *runtime
+    command: [python3, /opt/lakehouse/registry_service.py]
+    mem_limit: ${REGISTRY_MEMORY:-256m}
+    depends_on:
       catalog: {condition: service_healthy}
       runtime-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
 
   notebook:
     <<: *runtime

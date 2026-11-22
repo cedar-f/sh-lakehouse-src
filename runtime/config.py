@@ -30,7 +30,7 @@ def identifier(value):
 
 def uc(method, resource, data=None, params=None):
     from urllib.parse import urlencode
-    url = os.getenv('UC_URL', 'http://catalog:8080') + '/api/2.1/unity-catalog/' + resource
+    url = os.getenv('UC_URL', 'http://registry:8080') + '/api/2.1/unity-catalog/' + resource
     if params: url += '?' + urlencode(params)
     body = json.dumps(data).encode() if data is not None else None
     req = urllib.request.Request(url, data=body, method=method,
@@ -91,7 +91,7 @@ def spark_conf():
     for cat in all_catalogs():
         name = identifier(cat['name'])
         conf.update({f'spark.sql.catalog.{name}':'io.unitycatalog.spark.UCSingleCatalog',
-            f'spark.sql.catalog.{name}.uri':os.getenv('UC_URL','http://catalog:8080'),
+            f'spark.sql.catalog.{name}.uri':os.getenv('UC_URL','http://registry:8080'),
             f'spark.sql.catalog.{name}.auth.type':'static',
             f'spark.sql.catalog.{name}.auth.token':'not-used'})
     allowed = ('spark.sql.', 'spark.hadoop.', 'spark.jars.')

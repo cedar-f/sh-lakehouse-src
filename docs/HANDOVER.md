@@ -16,7 +16,7 @@ Hệ thống tích hợp các service độc lập, không phải Databricks Run
 
 ## Các nguyên tắc hoạt động
 
-1. UC metadata hoạt động trên PostgreSQL SSD. R2 giữ Delta, incoming và snapshot backup. Clone source hoặc dùng cùng bucket không tự kế thừa catalog; chuyển host cần restore metadata.
+1. UC metadata hoạt động trên PostgreSQL SSD. Registry JSON trên R2 tự dựng lại catalog/schema rỗng, comment/properties/root, external volume và external Delta table khi UC mới trống. Cần cùng bucket/prefix và registry đã sync trước reset; managed assets cần phục hồi riêng. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
 2. Spark chạy local, mỗi kernel/notebook nền có JVM riêng; SQL/dbt dùng SQL service. Chưa có shared Spark cluster/autoscaling.
 3. Người dùng thuộc cùng miền tin cậy. UC authorization tắt, SQL dùng NOSASL, UI Permissions không enforce RBAC.
 4. Repo source hệ thống khác repo workspace. Source chứa application/scripts/docs/templates; workspace chứa notebook/model/workflow. Secret, database volumes và backup không thuộc Git source.

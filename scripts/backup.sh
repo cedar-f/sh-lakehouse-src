@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # Pause writers for a consistent migration snapshot, then resume even on failure.
-docker compose stop notebook runner sql kestra catalog
+docker compose stop notebook runner sql kestra registry catalog
 trap 'docker compose up -d --no-build --wait --wait-timeout 900' EXIT
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 umask 077

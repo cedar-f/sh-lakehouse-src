@@ -44,6 +44,10 @@ Dùng `CREATE TABLE ... USING DELTA ...`, kiểm tra `SELECT current_catalog(), 
 
 Kiểm tra 4 biến R2, bucket/endpoint và quyền S3 credential. Secret Access Key khác token Bearer. Kiểm tra đồng hồ host nếu chữ ký không hợp lệ. Khi chia sẻ log, che credential; không đăng `.env` công khai. UC metadata kết nối được chưa bảo đảm credential storage đúng.
 
+## Registry pending / startup conflict
+
+Xem `docker compose logs --tail=100 registry`, key/endpoint/bucket, registry prefix và Compute status. R2 AccessDenied không là object missing; startup không được ghi registry trống. UC local khác registry khi không có lineage khớp cần chọn nguồn đúng theo [CATALOG_REGISTRY](CATALOG_REGISTRY.md), không tự reset hoặc xóa JSON. Managed unrestored là giới hạn replay có chủ đích; giữ inventory/location và phục hồi riêng, không tạo lại cùng tên để bỏ qua cảnh báo.
+
 ## Git push cần passphrase / Permission denied
 
 Mở GitHub → Refresh status, kiểm key loaded; dùng Unlock SSH key với passphrase hiện có. Jupyter và wizard cần cùng SSH agent do entrypoint tạo, không phải agent riêng trong một terminal. Repo phải có origin SSH, đúng key/quyền write và upstream. Sau cập nhật entrypoint cần rebuild/recreate notebook. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md) cho luồng init/clone/auto ignore và các lỗi remote/branch protection.

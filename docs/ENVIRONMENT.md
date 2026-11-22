@@ -99,6 +99,17 @@ Compute → Save & Restart Spark lưu cấu hình vào `WORKSPACE_DIR/.lakehouse
 
 TZ là IANA zone, ví dụ Asia/Ho_Chi_Minh hoặc Etc/UTC. UI chuyển timestamp chuẩn sang TZ để hiển thị và diễn giải bộ lọc datetime-local. Spark SQL session, JVM, PostgreSQL và Kestra được cấp cùng TZ. Workflow đã có timezone riêng vẫn giữ timezone đó; sửa Schedule timezone và Publish nếu muốn thay lịch.
 
+## Registry UC trên R2
+
+| Biến | Mặc định | Vai trò |
+|---|---|---|
+| UC_REGISTRY_ENABLED | true | Bật export/replay metadata qua registry proxy; false vẫn proxy nhưng không giữ metadata portable |
+| UC_REGISTRY_PREFIX | _lakehouse/registry/v1 | Prefix riêng chứa current.json; không nằm dưới warehouse/incoming |
+| UC_REGISTRY_SYNC_SECONDS | 60 | Chu kỳ reconcile, 10..3600 giây; metadata API qua proxy còn sync trước khi trả thành công |
+| REGISTRY_MEMORY | 256m | Cap proxy/export process; tăng khi inventory lớn, vẫn giữ ngân sách RAM host |
+
+Default áp dụng cả env cũ chưa có các biến này. Không đặt lifecycle xóa registry nếu muốn kế thừa sau reset. Đổi prefix chọn một metadata namespace khác; không tự merge registry của hai workspace. Không có credential trong registry do server xuất, nhưng custom properties do user nhập có thể nhạy cảm. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md) trước khi bật/tắt hoặc đổi prefix trên deployment có state.
+
 ## Retention
 
 | Biến | Mặc định | Phạm vi |
@@ -137,7 +148,8 @@ Các biến sau do Compose/entrypoint đặt, thường không cần thêm vào 
 | WORKSPACE_ROOT | Code fallback /workspace; bind mount hiện cố định /workspace |
 | RUNS_ROOT | /var/lib/lakehouse/runs |
 | RUNTIME_ROOT | /var/lib/lakehouse/runtime |
-| UC_URL | http://catalog:8080 |
+| UC_URL | http://registry:8080, proxy UC có synchronization barrier |
+| UC_UPSTREAM_URL | http://catalog:8080, Java UC backend riêng |
 | SQL_HOST | sql |
 | RUNNER_URL | http://runner:8765 |
 | KESTRA_URL | http://kestra:8080 |

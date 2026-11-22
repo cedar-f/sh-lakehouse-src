@@ -15,6 +15,10 @@ Tài liệu định nghĩa cách kiểm tra; không là nhật ký kết quả c
 
 Lệnh và side effects của các test ở [DEVELOPMENT](DEVELOPMENT.md). Chạy storage tests trên bucket/schema/prefix thử; kiểm kế hoạch cleanup trước thao tác ghi/xóa. Unit fixtures không dùng credential hay volume production.
 
+## Kiểm tra registry UC
+
+Tạo catalog rỗng, schema rỗng có comment/properties/root riêng, external volume và external Delta table sandbox; sync và kiểm current.json. Dựng UC đích trống cùng registry, kiểm tên/comment/properties/root, volume/table location và query data đã biết. Kiểm pagination, restore bị ngắt, JSON/bucket/path lỗi, R2 403, stale ETag và UC conflict. Managed asset phải hiện unrestored, giữ inventory và không tự biến thành external. Không xóa UC thật để test khi chưa xác định dữ liệu thuộc diện thử.
+
 ## Kiểm tra Git
 
 Kiểm cả repo mới và repo có code. Repo mới: tạo GitHub repo trống → init/connect → ignore tự động → SSH key/Unlock → Review → commit → push/upstream. Repo có code: clone vào folder mới → giữ history/upstream → ignore được bổ sung → native Git commit/push tiếp. Cần thử wrong passphrase, key có sẵn không bị ghi đè, remote khác/non-empty bị từ chối, file đổi sau preview, custom ignore được giữ và container restart yêu cầu unlock lại encrypted key.

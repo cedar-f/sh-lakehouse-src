@@ -17,7 +17,7 @@ Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, S
 ## Phạm vi quan trọng
 
 - Spark local với JVM riêng cho SQL, từng kernel và notebook nền; chưa shared cluster/autoscaling.
-- UC metadata ở PostgreSQL. R2 chứa Delta, incoming và snapshot; cùng bucket không tự kế thừa catalog.
+- UC chạy trên PostgreSQL; registry JSON trên R2 tự phục hồi catalog/schema rỗng, comment/properties/root và external assets vào UC mới. Managed assets được giữ inventory và báo chưa phục hồi. Xem [CATALOG_REGISTRY](docs/CATALOG_REGISTRY.md).
 - UC authorization tắt, SQL NOSASL; miền người dùng tin cậy. Public access theo [SECURITY](docs/SECURITY.md).
 - Snapshot script không nhân bản toàn bộ Delta data; cần data backup độc lập.
 - Phần chưa nghiệm thu/triển khai được ghi tại [REQUIREMENTS](docs/REQUIREMENTS.md).

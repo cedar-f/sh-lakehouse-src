@@ -29,6 +29,10 @@ R2 là object storage; folder là prefix của object key. Khi prefix chưa có 
 
 Catalog/schema nằm trong PostgreSQL/UC. Không tạo folder giả tương ứng từng table; UC/Spark tạo location và `_delta_log` khi thực sự ghi Delta table. Vì vậy `warehouse/` có thể trống trước lần ghi đầu tiên.
 
+## Reset local khi giữ R2
+
+Nếu registry đã sync, xóa PostgreSQL/runtime local rồi start sẽ tự replay object được hỗ trợ từ registry trước bootstrap. Đây không phải xóa trắng catalog bền vững. Kiểm Compute → Catalog registry on R2 và [CATALOG_REGISTRY](CATALOG_REGISTRY.md) trước reset, nhất là unrestored managed assets. Không thể xuất lại metadata đã mất trước lần sync đầu.
+
 ## Làm lại metadata khi đã xóa sạch R2
 
 Xóa object R2 không tự xóa metadata table trong PostgreSQL. Chỉ khi bạn chủ động muốn bỏ toàn bộ metadata/lịch sử cũ trên host này, chạy:
@@ -40,7 +44,7 @@ bash scripts/rebuild.sh --reset-metadata
 
 Script build image và kiểm tra kết nối/khởi tạo prefix R2 trước. Nếu credential bị từ chối, dừng trước khi xóa metadata. Khi kiểm tra đạt, flag này dừng stack và xóa **4 named volumes của đúng Compose project**: postgres_data (UC + database Kestra), lakehouse_data (history/log/artifact và trạng thái upload), kestra_storage, kestra_tmp. Catalog, workflow execution history và run history cũ trên host bị xóa. Script từ chối external volume hoặc volume không mang label sở hữu đúng project; không ép xóa volume còn đang được sử dụng.
 
-`.env`, file workspace, SSH key volume và cache Maven được giữ nguyên. Script không xóa bất kỳ object R2 nào, kể cả khi bucket đã có dữ liệu trở lại. Không dùng reset metadata cho một kho dữ liệu cần kế thừa: dùng [MIGRATION.md](MIGRATION.md). Reset không phục hồi object R2 đã xóa.
+`.env`, file workspace, SSH key volume và cache Maven được giữ nguyên. Script không xóa bất kỳ object R2 nào, kể cả khi bucket đã có dữ liệu trở lại. Registry hợp lệ còn trên R2 sẽ được replay sau reset; managed assets vẫn cần phục hồi riêng. Nếu muốn metadata namespace mới nhưng giữ R2 data, chọn UC_REGISTRY_PREFIX mới có chủ đích theo [CATALOG_REGISTRY](CATALOG_REGISTRY.md). Reset không phục hồi object R2 đã xóa.
 
 ## File và folder Delete
 

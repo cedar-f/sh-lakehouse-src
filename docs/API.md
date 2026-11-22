@@ -93,6 +93,12 @@ GET /lakehouse/docs/{run_id}/catalog.json
 
 Cùng Jupyter auth. Artifact path bị chặn traversal/secret-named file/profiles.yml; không public thư mục runs bằng web server riêng. UI log giữ 1000 event gần nhất trong browser; dùng paging/artifact cho phần đầy đủ còn được giữ.
 
+## Gateway: portable UC registry
+
+GET `/lakehouse/api/catalog-registry` trả enabled/ready/bucket/key/last_sync/pending/counts/nonportable/unrestored/error. POST `/lakehouse/api/catalog-registry/sync` yêu cầu một lần scan/export, không xóa hay restore dữ liệu. Hai endpoint dùng Jupyter auth, forward tới registry service với X-Runner-Token. Registry private có GET /registry/status, POST /registry/sync cùng token, GET /health không auth. UC proxy không public host port, theo trust boundary UC hiện tại.
+
+Metadata write có thể đã áp dụng trên UC trước khi registry PUT lỗi; response 503 nói rõ không retry mù. Pending chặn metadata writes tiếp theo, reconcile tự thử lại; ETag/lineage conflict không được ghi đè tự động. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
 ## Gateway: GitHub workspace
 
 Các route dưới `/lakehouse/api/git/` dùng Jupyter auth/XSRF. Không đưa passphrase vào query string, URL hoặc log. Phạm vi là user Jupyter hiện tại; các action không chạy trong runner.

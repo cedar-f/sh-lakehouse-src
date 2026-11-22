@@ -16,7 +16,7 @@
 | dbt | dbt Core + Spark Thrift + report/Docs | Phải đo và kiểm build/tests trên deployment thật |
 | Nhiều user | JupyterHub/PAM tùy chọn | Chung trust boundary; không UC per-user RBAC |
 | Power BI/ADF | ODBC + Windows gateway/SHIR | Driver/network/license riêng |
-| Chuyển host giữ catalog | Metadata snapshot trên R2 và restore PostgreSQL | Không chạy hai writer khi migrate |
+| Chuyển host giữ catalog | Portable registry R2 replay empty namespace/comments/properties/root/external volume/table; DB restore cho UC đầy đủ | Sync trước reset, managed inventory chưa tự replay; chỉ một writer |
 
 Các giới hạn chưa triển khai gồm UC authorization theo user, row/column policies, isolated multi-tenant compute/storage, Spark shared cluster/autoscaling, RAM driver theo service và runner cancellation xuyên suốt từ Kestra. Xem [DECISIONS](DECISIONS.md), [SECURITY](SECURITY.md), [ARCHITECTURE](ARCHITECTURE.md).
 

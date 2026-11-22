@@ -2,9 +2,13 @@
 
 Đối tượng: người vận hành, single-user Compose mặc định. Đọc [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md) và xác nhận đúng Compose project/host trước thao tác. Hub cần giữ thêm hub_home/hub_state; script backup mặc định không đóng gói hai volume đó.
 
+## Portable metadata và database backup
+
+Registry R2 tự phục hồi một phần định nghĩa UC vào UC trống theo [CATALOG_REGISTRY](CATALOG_REGISTRY.md); không phục hồi full database, managed identity, Kestra, workspace hoặc lịch sử. Với restore database snapshot bên dưới, đặt UC_REGISTRY_ENABLED=false trước restore; sau nghiệm thu DB chọn registry prefix mới rồi bật lại để không để snapshot cũ ghi đè registry mới hơn.
+
 ## Phạm vi backup hiện có
 
-`scripts/backup.sh` dừng notebook/runner/sql/kestra/catalog, giữ PostgreSQL chạy để pg_dump, rồi đóng gói workspace, runtime và Kestra storage. Script có EXIT trap bật lại service kể cả khi backup lỗi. Lưu notebook và chờ job hoàn tất trước khi chạy để tránh ngắt công việc đang ghi.
+`scripts/backup.sh` dừng notebook/runner/sql/kestra/registry/catalog, giữ PostgreSQL chạy để pg_dump, rồi đóng gói workspace, runtime và Kestra storage. Script có EXIT trap bật lại service kể cả khi backup lỗi. Lưu notebook và chờ job hoàn tất trước khi chạy để tránh ngắt công việc đang ghi.
 
 | File trong snapshot | Nội dung |
 |---|---|
@@ -83,7 +87,7 @@ Nếu xác nhận code cũ tương thích metadata/config hiện tại, có th�
 
 ```bash
 git status --short
-docker compose stop notebook runner sql kestra catalog
+docker compose stop notebook runner sql kestra registry catalog
 git switch --detach GOOD_COMMIT
 bash scripts/start.sh
 ```
@@ -94,7 +98,7 @@ Nếu đã nâng schema UC/Kestra/PostgreSQL không tương thích ngược, che
 
 ## Xóa R2 khác reset local metadata
 
-`bash scripts/rebuild.sh --reset-metadata` xóa đúng bốn local metadata/runtime volumes sau preflight R2, giữ workspace/key/cache và mọi object R2. Nó tạo catalog sạch, không reconstruct table registry từ toàn bộ Delta files đã có. Trường hợp có dữ liệu cần kế thừa phải restore metadata hoặc đăng ký external location có kiểm tra, không reset như thao tác sửa lỗi auth.
+`bash scripts/rebuild.sh --reset-metadata` xóa đúng bốn local metadata/runtime volumes sau preflight R2, giữ workspace/key/cache và mọi object R2. Khi registry R2 còn hợp lệ, nó replay các object được hỗ trợ trước bootstrap; không quét Delta files để suy ra mọi metadata hoặc khôi phục managed identity. Trường hợp có dữ liệu cần kế thừa phải restore metadata hoặc đăng ký external location có kiểm tra, không reset như thao tác sửa lỗi auth.
 
 ## Lịch backup và mục tiêu phục hồi
 

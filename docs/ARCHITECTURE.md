@@ -21,7 +21,10 @@ flowchart LR
   S --> U
   N --> U
   Q --> U
-  U --> P[PostgreSQL UC metadata]
+  U --> G[Registry proxy]
+  G --> V[Java UC backend]
+  G --> O
+  V --> P[PostgreSQL UC metadata]
   K --> P2[PostgreSQL Kestra database]
   S --> O
   N --> O
@@ -34,6 +37,7 @@ SQL/dbt không chạy trong kernel notebook đang mở. `SPARK_THREADS` là loca
 |---|---|---|
 | postgres | PostgreSQL 16.6 | Database unitycatalog và kestra trong cùng postgres_data |
 | catalog | UC server + R2CredentialGenerator | Metadata UC, managed table support, credential vending |
+| registry | registry_service.py + catalog_registry.py | Proxy UC, conditional JSON registry trên R2, sync/replay/health barrier |
 | runtime-init | migrate_runtime.py, one-shot, root | Chuyển artifact cũ có so hash, chuẩn hóa ownership runtime volume |
 | bootstrap | bootstrap.py, one-shot, analyst | Đảm bảo R2 prefixes, catalog/schema/incoming volume, sample nếu thiếu |
 | notebook | start.sh notebook → JupyterLab | UI extension, API gateway và kernels |
@@ -46,7 +50,7 @@ SQL/dbt không chạy trong kernel notebook đang mở. `SPARK_THREADS` là loca
 
 `scripts/start.sh` kiểm tra Docker/R2 placeholders/disk, build image, chạy one-off root chown workspace/ivy/SSH. Script force-recreate bootstrap để việc tạo prefix vẫn được chạy lại dù image không đổi.
 
-Trong dependency graph: postgres healthy → catalog healthy; runtime-init hoàn tất → bootstrap được chạy sau khi catalog healthy; bootstrap hoàn tất → notebook và sql; sql healthy → runner; runner healthy + postgres healthy → kestra. Bootstrap/runtime-init Exited (0) là thành công. Health SQL chạy SELECT 1; health catalog kiểm tra API metadata. Kestra chưa khai báo healthcheck trong Compose; cần kiểm tra UI/login/execution riêng.
+Trong dependency graph: postgres healthy → catalog healthy; runtime-init hoàn tất + catalog healthy → registry kiểm/replay R2 và healthy → bootstrap; bootstrap hoàn tất → notebook và sql; sql healthy → runner; runner healthy + postgres healthy → kestra. Bootstrap/runtime-init Exited (0) là thành công. Health SQL chạy SELECT 1; health catalog kiểm tra API metadata. Kestra chưa khai báo healthcheck trong Compose; cần kiểm tra UI/login/execution riêng.
 
 `docker compose up` trực tiếp không nhất thiết lặp lại bootstrap one-shot đã hoàn tất; dùng script start/rebuild khi cần khởi tạo lại prefix. `rebuild.sh --reset-metadata` kiểm tra R2 trước rồi xóa đúng bốn metadata volumes thuộc project; xem [REBUILD_DBT.md](REBUILD_DBT.md).
 
@@ -84,6 +88,12 @@ dbt subprocess dùng dbt-spark method thrift; runner sinh profiles.yml với thr
 
 Đây là integration riêng cần regression khi nâng UC/R2 connector. Scoped credential không thay per-user authorization: UC auth đang disabled, và notebook/runner còn có parent R2 credential trong environment. Xem [SECURITY.md](SECURITY.md).
 
+## Portable UC registry
+
+Toàn bộ client project dùng UC_URL registry proxy, backend catalog không publish host port. POST/PATCH/PUT/DELETE metadata catalogs/schemas/tables/volumes được serialize và sync trước response thành công. Reconcile scan có pagination bắt cả empty namespace và thay đổi ngoài proxy trong khoảng poll. R2 current.json có version/bucket/ETag CAS; runtime/registry/state.json giữ lineage, pending/restore marker và unsupported inventory.
+
+Registry replay khi UC trống diễn ra trước bootstrap. UC nonempty khác registry không có lineage khớp bị chặn. Partial replay resume không ghi đè object có định nghĩa khác. Managed asset không bị biến thành external; bảng/volume chưa replay vẫn giữ inventory và có cảnh báo Compute. Chi tiết và giới hạn ở [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
 ## GitHub onboarding và native Git
 
 GitHub panel gọi git_integration.py qua authenticated Jupyter gateway. Init/connect lưu Git author, origin SSH và core.sshCommand theo repo; clone giữ default branch/history/upstream. Cả hai tự merge managed `.gitignore`. Commit đầu chỉ stage file đã review; native Git dùng cùng `.git` sau đó.
@@ -117,6 +127,7 @@ Compute lưu `.lakehouse/spark.json` chung. SQL restart đợi LOCK, ghi request
 | kestra_storage / kestra_tmp | File và temp Kestra | Cần snapshot phù hợp để restore executions |
 | R2 warehouse | Delta data và _delta_log | Metadata PostgreSQL không phục hồi được dữ liệu đã xóa |
 | R2 incoming | Object upload | Chưa tự trở thành table Delta |
+| R2 UC_REGISTRY_PREFIX | Định nghĩa catalog/schema/external assets và inventory managed | Có thể mất khả năng replay nếu mất registry và PostgreSQL |
 | R2 BACKUP_PREFIX | Snapshot local state | Không chứa bản nhân đôi toàn bộ warehouse |
 
 Local `spark-warehouse`/Derby phụ được chuyển sang runtime volume cho session nội bộ; không phải database UC chính. Không xóa chỉ vì tên giống thư mục tạm: có thể còn local tables cũ. Runtime-init chỉ archive legacy Hive khi có marker quản trị sau kiểm tra.

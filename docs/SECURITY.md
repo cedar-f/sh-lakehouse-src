@@ -50,6 +50,10 @@ Artifact endpoint chặn traversal, profiles.yml và secret-named files, có CSP
 
 UC R2 signer dùng JWT scope và thời hạn 1 giờ; API UC hiện không gắn privilege với identity người dùng. Parent credential còn có trong environment; không quảng bá đây là enforcement giữa hai host dùng chung R2 keys.
 
+## Registry metadata
+
+Registry proxy giữ trust boundary UC authorization disabled hiện có, không bổ sung RBAC. Control status/sync cần internal RUNNER_TOKEN, UI qua Jupyter auth. Chỉ xuất allowlist metadata, không xuất API credential hoặc env; custom properties vẫn là dữ liệu do user nhập và có thể nhạy cảm. Prefix registry private cùng bucket cần bảo vệ khỏi xóa/sửa trực tiếp. Client bypass proxy chỉ được reconcile sau poll; không cấp raw backend như một endpoint durable tương đương proxy. Một writer/registry namespace, không multi-host coordination service. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
 ## Git credential và agent
 
 Git wizard tạo private key trên server, chỉ hiển thị public key. Passphrase chỉ tồn tại trong request/child env askpass; không persist trong file config. Dùng HTTPS/tunnel cho thao tác Unlock. Socket agent nằm trong home user (SSH dir mode 700), key mode 600; một key được mở có thể được dùng bởi process cùng user. Hệ thống tin cậy chung không cô lập secret khỏi người có quyền chạy code cùng user.

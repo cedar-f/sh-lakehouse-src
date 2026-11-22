@@ -30,6 +30,7 @@
 | run_support.py / run_store.py | Code snapshots, process capture/limits, SQLite index, logs/cells/models/artifacts |
 | retention.py / migrate_runtime.py / backup_storage.py | Retention, migration có hash và snapshot archive |
 | git_integration.py / git_askpass.py / labextension/github.js | Git onboarding/clone/ignore, bounded preview/commit/push và SSH agent/askpass dùng chung với native Git |
+| catalog_registry.py / registry_service.py | R2 manifest validation/CAS/lineage, paginated UC export, startup replay và UC proxy synchronization |
 | file_deletion.py | Validate target/confirmation, active upload preflight, batch delete và partial errors |
 | labextension/index.js | Đăng ký sidebar/tab, API helper và các panel chính |
 | labextension/filetree.js / compute.js / workflow.js / history.js / style.css | Tree, restart UI, graph editor, history/detail và CSS |
@@ -75,6 +76,8 @@ Trong virtualenv riêng, cài `tests/requirements-ui.txt`, cài Chromium bằng 
 | `python tests/ui_tabs_files.py` | Ghi object thử dưới incoming prefix ngẫu nhiên, kiểm tra tree/upload và cleanup các key thử |
 | `python tests/ui_compute_restart.py` | Restart/configure Spark và thao tác notebook; dùng môi trường riêng, đọc fixture/cleanup trong script |
 | `python tests/ui_git_setup.py` | Tạo/xóa container Docker riêng với repo bare local; kiểm GitHub wizard, key encrypted, native Git và restart. Không đọc .env hoặc gọi GitHub/R2. LAKEHOUSE_GIT_TEST_IMAGE chọn runtime image |
+| `python tests/registry_integration.py` | Docker UC/PostgreSQL riêng, xóa DB fixture và replay qua file-backed fake R2; không chạm env/volume/R2 production. Chọn image bằng LAKEHOUSE_REGISTRY_TEST_IMAGE/LAKEHOUSE_CATALOG_TEST_IMAGE |
+| `python tests/ui_registry.py` | Container Jupyter riêng và API fixtures; kiểm counts/unrestored/pending/manual sync/disabled và TZ của Compute, không đọc env/R2 |
 | `bash scripts/check.sh` | Smoke test có ghi Delta table thật; cần kế hoạch dọn table thử |
 | `bash scripts/check-notebook.sh notebooks/my_job.ipynb` | Thực thi notebook thật và mọi side effect trong notebook |
 

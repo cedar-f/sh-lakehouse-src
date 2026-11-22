@@ -40,6 +40,10 @@ bash scripts/check-notebook.sh notebooks/ten_notebook_cua_ban.ipynb
 
 Docker Desktop quản lý volume trong virtual disk; trên Ubuntu volume thuộc Docker data root. Xem volume của project bằng `docker volume ls` và `docker volume inspect <volume_name>`, không sửa trực tiếp file database trong volume.
 
+## Theo dõi portable UC registry
+
+Compute → Catalog registry on R2 cho biết sync/pending/counts và managed inventory chưa replay. Có thể dùng `docker compose exec -T registry python3 /opt/lakehouse/registry_service.py status` hoặc sync. Trước reset local, đảm bảo registry đã lưu đúng metadata cần giữ; khi UC trống sẽ replay trước bootstrap. Không xóa current.json hoặc đổi prefix để chữa lỗi auth/conflict nếu chưa xác định nguồn đúng. Reconcile mặc định mỗi 60 giây, chỉ PUT khi metadata thay đổi; có GET ETag mỗi lần sync. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
 ## Git sau recreate hoặc chuyển host
 
 Key single-user được giữ ở git_ssh; encrypted key cần mở lại trong GitHub → Unlock SSH key sau khi agent/container restart. Kiểm tra status Key loaded trước push từ Jupyter Git. Key của host pull source và key analyst push workspace là hai phạm vi riêng. Backup/restore key theo [DISASTER_RECOVERY](DISASTER_RECOVERY.md); Hub dùng key trong home của user. Cập nhật onboarding xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).

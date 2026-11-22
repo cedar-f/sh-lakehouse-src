@@ -4,7 +4,7 @@
 
 ## 16 GB RAM: cấu hình cân bằng hiện hỗ trợ
 
-Dành trần khoảng 11 GiB cho bốn container có biến memory; để phần còn lại cho Ubuntu, Docker, UC, PostgreSQL và cache. Với 16 GB RAM vật lý, hệ điều hành có thể báo thấp hơn 16 GiB.
+Dành trần khoảng 11 GiB cho bốn container có biến memory; để phần còn lại cho Ubuntu, Docker, UC, registry proxy, PostgreSQL và cache. Với 16 GB RAM vật lý, hệ điều hành có thể báo thấp hơn 16 GiB.
 
 ```dotenv
 SPARK_THREADS=2
@@ -25,6 +25,7 @@ KESTRA_JAVA_OPTS=-Xms256m -Xmx1g -XX:ActiveProcessorCount=2
 | sql | Cap 3 GiB, Spark heap 2 GiB; dbt SQL chạy tại đây |
 | runner | Cap 3 GiB, notebook nền có Spark heap 2 GiB; dbt client/process cũng ở đây |
 | kestra | Cap 2 GiB, Java heap tối đa 1 GiB |
+| registry | Cap 256 MiB bổ sung, cấu hình REGISTRY_MEMORY; không chạy Spark |
 | Ubuntu/Docker/PostgreSQL/UC/cache | Ngân sách phần còn lại; chưa có hard cap cho catalog/postgres trong env |
 
 Cap container không được cấp phát hết ngay khi bật. JVM heap nằm trong cap container và còn cần Python, native/off-heap, thread stack, Jupyter. Mỗi notebook kernel tạo Spark riêng; hai heap 2g có thể vượt cap notebook 3g. Đóng tab không shutdown kernel. Không cộng heap của SQL/notebook/background thành một pool cho query.

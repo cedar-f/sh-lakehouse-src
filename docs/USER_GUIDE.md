@@ -53,6 +53,8 @@ Mỗi file/thư mục con trong incoming có **Delete**; folder yêu cầu nhậ
 
 Chỉnh CPU, driver memory, shuffle, default catalog/schema và Extra Spark config. Chọn Restart scope: SQL/dbt, notebook được đánh dấu, hoặc cả hai; bấm Save & Restart Spark, theo dõi tới READY/FAILED. Restart kernel làm mất biến/DataFrame trong RAM và ngắt query của kernel đó; notebook đã lưu và table vẫn được giữ.
 
+Compute còn có **Catalog registry on R2**: Refresh registry status, Sync registry now, counts và unrestored warnings. Trước reset local, kiểm Synchronized và phân biệt external được replay với managed chỉ giữ inventory. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
 Giới hạn container nằm trong `.env`; thay driver memory trong Compute không tự nâng giới hạn container. Xem [ENVIRONMENT.md](ENVIRONMENT.md).
 
 ## Git và GitHub

@@ -52,7 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start.ps1
 docker compose ps
 ```
 
-Script kiểm tra Linux engine, cấu hình R2, build image và đợi dịch vụ healthy. Khi đã có image đúng phiên bản, có thể dùng `-SkipBuild` để khởi động lại. Chờ bootstrap/runtime-init hoàn tất; catalog/postgres/notebook/sql/runner có healthcheck. Kestra không có healthcheck trong Compose hiện tại, kiểm tra thêm trang web hoặc log của nó.
+Script kiểm tra Linux engine, cấu hình R2, build image và đợi dịch vụ healthy. Khi đã có image đúng phiên bản, có thể dùng `-SkipBuild` để khởi động lại. Chờ bootstrap/runtime-init hoàn tất; catalog/postgres/registry/notebook/sql/runner có healthcheck. Kestra không có healthcheck trong Compose hiện tại, kiểm tra thêm trang web hoặc log của nó.
 
 Mở http://localhost:8888/lab, nhập JUPYTER_TOKEN trong `.env`. Kestra ở http://localhost:8082, đăng nhập bằng KESTRA_USER/KESTRA_PASSWORD. Chỉ copy giá trị token/password, không copy tên biến hoặc dấu bằng.
 

@@ -7,7 +7,7 @@
 | JupyterLab extension là UI chính | Giữ notebook/Git native, các panel mở cùng vùng tab; không nhúng notebook editor qua iframe. Cần rebuild bundle khi đổi UI |
 | Spark local thay cluster phân tán | Đơn giản cho một host Docker; nhiều JVM, RAM không gộp, không autoscale. Chuyển Spark Connect/shared cluster là thay kiến trúc chưa làm |
 | Delta trên R2 Standard | Dữ liệu hot, S3-compatible; không dùng Google Drive làm storage hoạt động. Files uploaded phải chuyển thành Delta nếu muốn table |
-| UC OSS + PostgreSQL | Có metadata/catalog/schema và managed Delta integration; active DB dùng SSD. R2 chỉ chứa snapshot metadata để migrate |
+| UC OSS + PostgreSQL + R2 registry | UC hoạt động trên SSD; portable JSON registry phục hồi namespace/external assets khi UC trống. Full managed identity/UC state vẫn cần DB restore |
 | Custom UC R2 credential signer | Integration UC/R2 dùng scoped credentials; cần test riêng khi nâng version. Không suy ra per-user enforcement khi UC auth disabled |
 | Kestra + runner | Kestra giữ schedule/execution, runner chạy subprocess và advanced logic; không mount Docker socket. Cancel trong Kestra chưa bảo đảm dừng runner tức thời |
 | dbt Core qua Spark Thrift | Tận dụng SQL service; không cần dbt Cloud account. Docs snapshot tách khỏi report execution/test |

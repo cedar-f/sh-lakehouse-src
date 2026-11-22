@@ -51,6 +51,7 @@ Thay lakehouse bằng catalog được phê duyệt; đây là ghi dữ liệu t
 
 | Kiểm tra | Điều kiện đạt |
 |---|---|
+| Registry | Sync counts đúng, giữ catalog/schema rỗng và comment/properties/root; external volume/table location giữ khi replay sang UC trống; managed unrestored có cảnh báo |
 | Bootstrap R2 | warehouse/incoming/backup prefix xuất hiện hoặc nội dung cũ được dùng lại |
 | Upload | File riêng trong incoming/acceptance/ đọc lại đúng nội dung |
 | Nhiều file/resume | Progress theo part; cancel/resume chỉ với đúng file và session còn tồn tại |
