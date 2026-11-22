@@ -63,3 +63,24 @@ Artifact hết hạn theo retention; metadata history có thể còn. INTERRUPTE
 ## Giao diện chưa cập nhật
 
 Build image mới và recreate notebook, sau đó Ctrl+F5. Code frontend được đóng trong image, không hot reload trực tiếp từ thư mục runtime trên host. Nếu các tab lỗi, kiểm tra log notebook/runner và status của API; ghi lại thao tác, flow/run ID, thời điểm theo TZ và đoạn lỗi để tra cứu.
+
+## PermissionError đọc /opt/lakehouse/platform_bootstrap.py
+
+Docker image chạy bằng user analyst (UID 1000), dù host Ubuntu đang đăng nhập root. Khi source được checkout với umask 077, file mới có thể là 600 và directory là 700. Docker COPY giữ mode đó với ownership root, khiến analyst không đọc được module/template. Đây là lỗi đóng gói image, không chữa bằng cách chạy Bash bằng sudo trên host.
+
+Dockerfile đã chuẩn hóa quyền đọc/traverse của code và frontend sau COPY; code vẫn root-owned và analyst không được sửa. Catalog startup script dùng mode 0755 rõ ràng.
+
+Sau khi commit sửa lỗi đã được push, chạy trên Ubuntu:
+
+```bash
+cd ~/data/sh-lakehouse-src
+umask 022
+git pull --ff-only
+bash scripts/rebuild.sh
+```
+
+Nếu đang chủ động dựng mới và muốn bỏ metadata cũ, dùng `bash scripts/rebuild.sh --reset-metadata` thay cho lệnh rebuild cuối; flag này có ý nghĩa xóa metadata/lịch sử như mô tả trong [REBUILD_DBT.md](REBUILD_DBT.md). Lỗi import ở preflight xảy ra trước bước reset volumes.
+
+Giữ `.env` ở mode 600: `chmod 600 .env`. Chỉ dùng umask 077 trong phạm vi tạo secret hoặc script con, không để phiên Git checkout phụ thuộc vào nó.
+
+Regression test: `python3 tests/image_permissions.py`. Test build từ context có Python/template/startup root-only, kiểm tra import/read/template generation bằng user runtime và quyền đọc/chạy UC startup; không dùng R2 hay data volume.

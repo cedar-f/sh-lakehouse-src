@@ -2,6 +2,8 @@
 
 ## Bổ sung V3.1.3 — 22/11/2026
 
+Hotfix quyền image: đã tái hiện PermissionError bằng module root-owned mode 600 trên image cũ. Regression build dùng Python/template mode 600 và directory mode 700: image mới cho phép analyst import backend, đọc frontend/template và tạo starter; code vẫn không writable. Catalog startup mode 600 trong context được chuẩn hóa thành 0755 và đọc/chạy được bằng user unitycatalog. Cả hai image test đều PASS; không truy cập R2/volume dữ liệu.
+
 - Build image/runtime và extension 3.1.3 thành công. Compose config, Bash syntax, PowerShell parser đạt.
 - **87 kiểm thử Python PASS**: bao gồm xác nhận/path traversal, vùng storage được bảo vệ, xóa folder hơn 2000 object theo batch, lỗi từng object, upload đang diễn ra; bootstrap chạy lại không ghi đè dữ liệu/project/flow; reset chỉ chọn volume metadata thuộc đúng project.
 - Project dbt mẫu parse thành công bằng dbt-core 1.12.7/dbt-spark 1.11.0: 1 seed, 1 model, 7 data tests. Sinh dbt Docs offline thành công bằng empty catalog; đây chưa phải kết quả chạy 7 test trên Spark.
