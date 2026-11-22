@@ -1,0 +1,89 @@
+cd ~/data/sh-lakehouse-src
+git pull --ff-only
+docker compose config --quiet
+
+
+--------------
+
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+import shutil
+import subprocess
+
+def output(args):
+    return subprocess.check_output(args, text=True).strip()
+
+root = Path.cwd().resolve()
+config = json.loads(output([
+    'docker', 'compose', 'config', '--format', 'json'
+]))
+project = config['name']
+
+mount = next(
+    item for item in config['services']['notebook']['volumes']
+    if item['target'] == '/workspace' and item['type'] == 'bind'
+)
+
+targets = [
+    Path(mount['source']),
+    root / 'backups',
+    root / 'backup',
+]
+
+# Validate all filesystem targets before deleting anything.
+checked = []
+protected = {
+    Path('/'), Path('/root'), Path('/home'), Path('/var'),
+    Path('/srv'), Path('/opt'), Path('/etc'), Path('/usr'),
+    Path.home().resolve(),
+}
+for target in targets:
+    if target.is_symlink():
+        raise SystemExit(f'Refusing symlink: {target}')
+    target = target.resolve()
+    if (
+        target in protected
+        or target == root
+        or root.is_relative_to(target)
+        or len(target.parts) < 3
+    ):
+        raise SystemExit(f'Refusing unsafe path: {target}')
+    if target.exists() and not target.is_dir():
+        raise SystemExit(f'Expected directory: {target}')
+    checked.append(target)
+
+print('Resetting project:', project, flush=True)
+for target in checked:
+    print('Deleting local directory:', target, flush=True)
+
+subprocess.run([
+    'docker', 'compose', 'down',
+    '--volumes', '--remove-orphans'
+], check=True)
+
+# Include leftover project volumes, such as optional Hub volumes.
+volumes = output([
+    'docker', 'volume', 'ls', '-q',
+    '--filter', f'label=com.docker.compose.project={project}'
+]).splitlines()
+
+if volumes:
+    subprocess.run(['docker', 'volume', 'rm', *volumes], check=True)
+
+for target in sorted(set(checked), key=lambda p: len(p.parts), reverse=True):
+    if target.exists():
+        shutil.rmtree(target)
+
+print('Local reset completed. Images, source, .env and R2 were kept.')
+PY
+
+
+-------------------------
+
+
+
+bash scripts/rebuild.sh
+
+docker compose exec -T registry python3 /opt/lakehouse/registry_service.py sync
