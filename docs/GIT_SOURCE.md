@@ -99,7 +99,7 @@ bash scripts/init.sh
 bash scripts/start.sh
 ```
 
-Windows dùng `scripts/init.ps1` và `scripts/start.ps1` theo [INSTALLATION.md](INSTALLATION.md). Mặc định `WORKSPACE_DIR=./workspace`; thư mục này vẫn được Git bỏ qua. Clone source không mang theo notebook/dbt/workflow cá nhân; workspace mới bắt đầu trống và chỉ sinh cấu hình nội bộ cần thiết khi chạy. Tạo project dbt theo [USER_GUIDE.md](USER_GUIDE.md).
+Windows dùng `scripts/init.ps1` và `scripts/start.ps1` theo [INSTALLATION.md](INSTALLATION.md). Mặc định `WORKSPACE_DIR=./workspace`; thư mục này vẫn được Git bỏ qua. Clone source không mang theo notebook/dbt/workflow cá nhân; workspace mới sinh cấu hình nội bộ cùng template dbt_sample và workflow dbt_sample_pipeline khi chưa có; có thể tắt bằng SEED_SAMPLE_DBT=false. Tạo project dbt theo [USER_GUIDE.md](USER_GUIDE.md).
 
 Clone source cũng không mang theo metadata Unity Catalog: cần [backup/restore](MIGRATION.md) nếu muốn kế thừa table/catalog và lịch sử cũ. Dùng cùng R2 bucket không tự khôi phục PostgreSQL metadata. Khi migrate, dừng host cũ theo quy trình tài liệu.
 

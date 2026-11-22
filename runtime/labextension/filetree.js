@@ -11,8 +11,8 @@ function bytes(size){
 
 /** Lazy R2 prefix tree. Lists expanded folders only, with pagination per folder. */
 export class FileTree{
-  constructor({list,downloadUrl,onSelect}){
-    this.list=list;this.downloadUrl=downloadUrl;this.onSelect=onSelect;
+  constructor({list,downloadUrl,onSelect,onDelete}){
+    this.list=list;this.downloadUrl=downloadUrl;this.onSelect=onSelect;this.onDelete=onDelete;this.deleting=false;
     this.folders=new Map();this.selected='incoming/';
     this.node=element('div','lh-file-tree');this.node.setAttribute('role','tree');
     this.node.setAttribute('aria-label','R2 file tree');
@@ -30,6 +30,7 @@ export class FileTree{
     item.row=element('div','lh-tree-row');item.arrow=element('span','lh-tree-arrow');
     item.arrow.setAttribute('aria-hidden','true');item.label=element('span','lh-tree-name',name);
     item.row.title=prefix||'Bucket root';item.row.append(item.arrow,item.label);
+    this.deleteButton(item.row,prefix,'folder',parent);
     item.group=element('div','lh-tree-children');item.group.setAttribute('role','group');
     item.status=element('div','lh-tree-status lh-muted');item.status.setAttribute('role','status');
     item.children=element('div');item.group.append(item.children,item.status);
@@ -64,6 +65,36 @@ export class FileTree{
     const index=items.indexOf(current);items[index+offset]?.focus();
   }
 
+  setDeleting(value){
+    this.deleting=value;
+    for(const button of this.node.querySelectorAll('.lh-tree-delete'))button.disabled=value;
+  }
+
+  deleteButton(row,key,kind,parent){
+    if(!this.onDelete||!key.startsWith('incoming/')||key==='incoming/')return;
+    const button=element('button','lh-tree-delete','Delete');button.type='button';button.disabled=this.deleting;
+    button.setAttribute('aria-label',`Delete ${kind} ${key}`);
+    button.title=kind==='folder'?'Delete this folder and all objects inside it':'Delete this file';
+    button.onclick=async event=>{
+      event.stopPropagation();if(this.deleting)return;
+      this.setDeleting(true);
+      try{
+        const result=await this.onDelete(key,kind);
+        if(!result)return;
+        if(kind==='folder'){
+          for(const [prefix,item] of this.folders){
+            if(!prefix.startsWith(key))continue;
+            item.loaded=false;
+            if(result.complete)this.folders.delete(prefix);
+          }
+          if(result.complete&&this.selected.startsWith(key))this.select(parent.prefix);
+        }
+        await this.refresh(parent.prefix);
+      }finally{this.setDeleting(false);}
+    };
+    row.append(button);
+  }
+
   async expand(item,expanded){
     item.expanded=expanded;this.update(item);
     if(expanded&&!item.loaded)await this.load(item,true);
@@ -76,8 +107,10 @@ export class FileTree{
     const row=element('div','lh-tree-row');row.append(element('span','lh-tree-arrow','·'));
     const link=element('a','lh-tree-name',file.key.slice(parent.prefix.length));
     link.href=this.downloadUrl(file.key);link.target='_blank';link.rel='noopener';link.title=file.key;link.tabIndex=-1;
-    row.append(link,element('span','lh-tree-size lh-muted',bytes(file.size)));item.append(row);
+    row.append(link,element('span','lh-tree-size lh-muted',bytes(file.size)));
+    this.deleteButton(row,file.key,'file',parent);item.append(row);
     item.onkeydown=event=>{
+      if(event.target!==item)return;
       if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();this.visible(item,event.key==='ArrowDown'?1:-1);}
       else if(event.key==='ArrowLeft'){event.preventDefault();parent.element.focus();}
       else if(event.key==='Enter'){event.preventDefault();link.click();}

@@ -50,18 +50,48 @@ export default {
         bar.append(button('Refresh',cats),button('+ Catalog',async()=>{const n=await ask('Create catalog','sales');if(n){await api('catalogs',{name:n});await cats();cat.value=n;await schemas();}}),button('+ Schema',async()=>{const n=await ask('Create schema','raw');if(n){await api('schemas',{name:n,catalog_name:cat.value});await schemas();}}));await cats();
       },
       Files:async root=>{
-        root.append(el('h2','','Files on R2'),el('div','lh-muted','Upload under incoming/. Table data under warehouse/ is read only in this browser.'));
+        root.append(el('h2','','Files on R2'),el('div','lh-muted','Upload and delete files or subfolders inside incoming/. Deletion is permanent. Table data under warehouse/ is read only.'));
         const bar=el('div','lh-toolbar'),prefix=el('input');prefix.value='incoming/';prefix.style.flex='1';prefix.setAttribute('aria-label','Upload folder');bar.append(el('span','lh-muted','Upload folder'),prefix,button('Refresh tree',()=>tree.refresh()),button('Collapse all',()=>tree.collapseAll()));root.append(bar);
         const drop=el('div','lh-drop','Drop files here, or click to select multiple files'),input=el('input');input.type='file';input.multiple=true;input.hidden=true;drop.append(input);root.append(drop);const queue=el('div'),listing=el('div');root.append(queue,listing);
-        let running=Promise.resolve();const enqueue=files=>{for(const f of files)running=running.then(()=>upload(f)).catch(e=>queue.append(el('div','lh-error',e.message)));};
+        const deletion=el('div','lh-delete-status');deletion.setAttribute('aria-live','polite');root.append(deletion);
+        let running=Promise.resolve(),pendingUploads=0;
+        const enqueue=files=>{
+          if(tree.deleting){queue.append(el('div','lh-error','Wait for deletion to finish before uploading.'));return;}
+          for(const f of files){pendingUploads++;running=running.then(()=>upload(f)).catch(e=>queue.append(el('div','lh-error',e.message))).finally(()=>pendingUploads--);}
+        };
         const tree=new FileTree({
           list:(path,token)=>api('files?prefix='+encodeURIComponent(path)+(token?'&page_token='+encodeURIComponent(token):'')),
           downloadUrl:key=>ServerConnection.makeSettings().baseUrl+'lakehouse/api/download?key='+encodeURIComponent(key),
           onSelect:path=>{prefix.value=path;},
+          onDelete:remove,
         });
         listing.append(tree.node);
         prefix.onchange=()=>{prefix.value=prefix.value.trim().replace(/\/?$/,'/');tree.select(prefix.value);};
-        input.onchange=()=>enqueue(input.files);drop.onclick=e=>{if(e.target!==input)input.click();};drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};drop.ondragleave=()=>drop.classList.remove('over');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');enqueue(e.dataTransfer.files);};
+        input.onchange=()=>{enqueue(input.files);input.value='';};drop.onclick=e=>{if(e.target!==input&&!tree.deleting)input.click();};drop.ondragover=e=>{e.preventDefault();if(!tree.deleting)drop.classList.add('over');};drop.ondragleave=()=>drop.classList.remove('over');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');enqueue(e.dataTransfer.files);};
+        async function remove(key,kind){
+          if(pendingUploads){await showDialog({title:'Uploads in progress',body:'Finish or cancel queued uploads before deleting.',buttons:[Dialog.okButton()]});return null;}
+          const body=el('div');body.append(el('p','',kind==='folder'?'Permanently delete this folder and every object inside it?':'Permanently delete this file?'),el('code','lh-delete-path',key),el('p','lh-muted','There is no recycle bin.'));
+          const confirmation=kind==='folder'?field(body,'Type the full folder path to confirm',''):null;
+          if(confirmation)confirmation.autocomplete='off';
+          const choice=await showDialog({title:'Delete '+kind,body:new Widget({node:body}),buttons:[Dialog.cancelButton(),Dialog.okButton({label:'Delete',displayType:'warn'})]});
+          if(!choice.button.accept)return null;
+          if(confirmation&&confirmation.value!==key){deletion.replaceChildren(el('div','lh-error','Path did not match. Nothing was deleted.'));return null;}
+          let deleted=0,more=true,stopped=false,failed=false;
+          const card=el('div','lh-card'),summary=el('div','','Deleting '+key),progress=el('progress','lh-progress'),actions=el('div','lh-toolbar');
+          progress.setAttribute('aria-label','Deletion in progress');
+          const stop=button('Stop after current batch',()=>{stopped=true;stop.disabled=true;});actions.append(stop);
+          card.append(summary,progress,actions);deletion.replaceChildren(card);input.disabled=true;
+          try{
+            do{
+              const result=await api('files/delete',{key,kind,confirmation:key});deleted+=result.deleted;more=result.has_more;
+              summary.textContent=`Deleted ${deleted} object(s) from ${key}${more?' — continuing…':''}`;
+              if(result.errors?.length){failed=true;summary.classList.add('lh-error');summary.textContent=`Deletion stopped: ${deleted} object(s) deleted; ${result.errors.length} object(s) failed. Remaining objects were kept.`;table(card,['Object','Code','Message'],result.errors.map(error=>[error.key,error.code,error.message]));break;}
+            }while(more&&!stopped);
+            if(!failed)summary.textContent=more?`Stopped after deleting ${deleted} object(s) from ${key}. Remaining objects were kept.`:`Deleted ${kind} ${key} (${deleted} object(s)).`;
+          }catch(error){failed=true;summary.classList.add('lh-error');summary.textContent=`Deletion stopped after ${deleted} confirmed object(s): ${error.message}. Refresh the tree to check remaining objects.`;}
+          finally{progress.remove();stop.disabled=true;input.disabled=false;}
+          return {complete:!more&&!failed};
+        }
         async function upload(file){if(!prefix.value.startsWith('incoming/'))throw Error('Choose an incoming/ destination before uploading');if(!file.size)throw Error('Empty files are not supported by multipart upload');const key=prefix.value.replace(/\/?$/,'/')+file.name;const card=el('div','lh-card'),label=el('div','',file.name),progress=el('progress','lh-progress'),state=el('div','lh-muted','Preparing…');progress.max=file.size;card.append(label,progress,state);queue.append(card);const identity='lh-upload:'+key+':'+file.size+':'+file.lastModified;let id=localStorage.getItem(identity),parts=new Map();if(id){try{const r=await api('upload?id='+id);parts=new Map(r.parts.map(p=>[p.PartNumber,p.Size]));}catch{id=null;}}if(!id){const r=await api('upload/start',{key,size:file.size});id=r.id;localStorage.setItem(identity,id);}let canceled=false;card.append(button('Cancel',async()=>{canceled=true;await api('upload/abort',{id});localStorage.removeItem(identity);state.textContent='Canceled';}));const size=32*1024*1024;let sent=0;try{for(let offset=0,part=1;offset<file.size;offset+=size,part++){if(canceled)return;const blob=file.slice(offset,offset+size);if(parts.get(part)===blob.size){sent+=blob.size;progress.value=sent;continue;}const settings=ServerConnection.makeSettings();state.textContent='Uploading part '+part;const r=await ServerConnection.makeRequest(settings.baseUrl+'lakehouse/api/upload/part?id='+id+'&part='+part,{method:'POST',body:blob,headers:{'Content-Type':'application/octet-stream'}},settings);if(!r.ok)throw Error((await r.json()).error);sent+=blob.size;progress.value=sent;state.textContent=(100*sent/file.size).toFixed(1)+'%';}await api('upload/complete',{id});localStorage.removeItem(identity);state.textContent='Complete';await tree.refresh(key.slice(0,key.lastIndexOf('/')+1));}catch(e){state.textContent='Paused: '+e.message+'. Select the same file again to resume.';}}
         await tree.initialize();
       },

@@ -1,0 +1,14 @@
+name: lakehouse_sample
+version: '1.0.0'
+config-version: 2
+profile: lakehouse
+model-paths: [models]
+seed-paths: [seeds]
+models:
+  lakehouse_sample:
+    +materialized: table
+    +file_format: delta
+seeds:
+  lakehouse_sample:
+    +file_format: delta
+    +quote_columns: false

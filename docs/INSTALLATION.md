@@ -102,6 +102,6 @@ Sau đó dùng http://localhost:8888/lab và http://localhost:8082 trên Windows
 1. Catalog hiển thị DEFAULT_CATALOG và DEFAULT_SCHEMA; Files mở được cây R2.
 2. Trong SQL chạy `SELECT current_catalog(), current_schema(), current_timezone();`.
 3. Trong Workflows tạo flow mới, đặt Flow ID `first_check`, thêm một task SQL với nội dung `SELECT 1 AS ok`, Save & publish to Kestra → Execute saved flow; xem SUCCESS trong Workflow Run History. Nếu muốn thử Variables/If/For each, dựng theo [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md).
-4. Tạo notebook và project dbt của bạn theo [USER_GUIDE.md](USER_GUIDE.md). Workspace mới từ Git chưa có model hay workflow cá nhân.
+4. Chạy dbt_sample_pipeline theo [REBUILD_DBT.md](REBUILD_DBT.md) để thử seed/build/test/docs. Tạo notebook và project dbt của bạn theo [USER_GUIDE.md](USER_GUIDE.md). Workspace mới từ Git chưa có model hay workflow cá nhân.
 
 Các thông số 8888/8082/10000 chỉ là mặc định. Hướng dẫn lỗi port, login, Spark và Docker nằm trong [TROUBLESHOOTING.md](TROUBLESHOOTING.md). Nếu nâng cấp hoặc di chuyển máy có dữ liệu, đọc [OPERATIONS.md](OPERATIONS.md) và [MIGRATION.md](MIGRATION.md) trước khi thay volume/database.

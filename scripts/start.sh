@@ -22,6 +22,8 @@ docker compose build
 # Bind mounts may have been created by root or transferred from Windows.
 docker compose run --rm --no-deps --user root notebook bash -c \
   'chown -R 1000:1000 /workspace /home/analyst/.ivy2 /home/analyst/.ssh; chmod 700 /home/analyst/.ssh'
+# Re-run idempotent initialization even when the bootstrap image did not change.
+docker compose up -d --force-recreate --wait --wait-timeout 900 bootstrap
 docker compose up -d --wait --wait-timeout 900
 printf '\nV3 started. Notebook: http://SERVER_IP:8888/lab (SSH tunnel if BIND_IP=127.0.0.1).\n'
 printf 'Use JUPYTER_TOKEN in .env. Kestra uses KESTRA_USER / KESTRA_PASSWORD.\n'

@@ -1,5 +1,15 @@
 # Kiểm chứng bản cleanup V3.1.1
 
+## Bổ sung V3.1.3 — 22/11/2026
+
+- Build image/runtime và extension 3.1.3 thành công. Compose config, Bash syntax, PowerShell parser đạt.
+- **87 kiểm thử Python PASS**: bao gồm xác nhận/path traversal, vùng storage được bảo vệ, xóa folder hơn 2000 object theo batch, lỗi từng object, upload đang diễn ra; bootstrap chạy lại không ghi đè dữ liệu/project/flow; reset chỉ chọn volume metadata thuộc đúng project.
+- Project dbt mẫu parse thành công bằng dbt-core 1.12.7/dbt-spark 1.11.0: 1 seed, 1 model, 7 data tests. Sinh dbt Docs offline thành công bằng empty catalog; đây chưa phải kết quả chạy 7 test trên Spark.
+- Kiểm tra trình duyệt với frontend build thật và API/storage fixture: cancel xóa, xác nhận file, nhập sai/đúng đường dẫn folder, xóa cây con, bảo vệ warehouse/root incoming và Open Docs ở tab mới đều đạt. Trang Docs tải index/manifest và render project lakehouse_sample.
+- Kiểm thử end-to-end với R2 thật chưa hoàn tất: credential trong các `.env` local hiện trả Unauthorized ở ListObjectsV2. Không reset volume dữ liệu thật; kiểm thử dùng một Compose project/workspace riêng. Cần credential hợp lệ để xác nhận toàn bộ flow seed/build/test/docs trên Spark/R2.
+
+Hướng dẫn sử dụng và cập nhật: [REBUILD_DBT.md](REBUILD_DBT.md).
+
 Ngày: 22/11/2026. Máy thực hiện là Windows 11 + Docker Desktop Linux containers. Ubuntu 22.04 là nền tảng triển khai đích; chưa cài lại trực tiếp host Ubuntu của người dùng trong đợt này.
 
 ## Phạm vi cleanup

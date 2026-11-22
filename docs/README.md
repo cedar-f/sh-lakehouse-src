@@ -1,4 +1,4 @@
-# Tài liệu R2 Lakehouse V3.1.1
+# Tài liệu R2 Lakehouse V3.1.3
 
 Đây là bộ lakehouse tự host bằng Docker: JupyterLab với extension Lakehouse, Spark/Delta Lake, Unity Catalog OSS, PostgreSQL, Cloudflare R2, dbt và Kestra. Tài liệu phản ánh bản project hiện tại; cập nhật ngày 22/11/2026.
 
@@ -6,6 +6,7 @@
 
 | Nhu cầu | Tài liệu |
 |---|---|
+| Cập nhật Git, bootstrap R2, Delete và dbt sample/report | [REBUILD_DBT.md](REBUILD_DBT.md) |
 | Đưa source lên GitHub, tách repo workspace | [GIT_SOURCE.md](GIT_SOURCE.md) |
 | Hiểu tính năng, kiến trúc và giới hạn | [FEATURES.md](FEATURES.md) |
 | Đối chiếu tiêu chí hệ thống | [REQUIREMENTS.md](REQUIREMENTS.md) |
@@ -38,6 +39,6 @@ docs/                       Bộ tài liệu này
 backups/                    Chỉ tạo khi backup/restore; được Git bỏ qua
 ```
 
-Source trên Git không chứa notebook, project dbt hay workflow đang làm của bạn. Workspace hiện tại được giữ riêng tại `../r2-lakehouse-data/workspace`, bao gồm Git cũ, code cá nhân và **variable_if_foreach_demo**. Cài mới từ Git tạo workspace trống; hướng dẫn tạo ví dụ nằm trong tài liệu. Lịch sử execution/run có retention riêng.
+Source trên Git không chứa notebook, project dbt hay workflow đang làm của bạn. Workspace hiện tại được giữ riêng tại `../r2-lakehouse-data/workspace`, bao gồm Git cũ, code cá nhân và **variable_if_foreach_demo**. Cài mới từ Git tạo dbt_sample và dbt_sample_pipeline khi chưa có; xem REBUILD_DBT.md để chạy mẫu và xem report. Lịch sử execution/run có retention riêng.
 
 Dùng một bộ source cho Windows và Ubuntu; không cần duy trì bản sao source riêng cho từng hệ điều hành. Các lệnh trong tài liệu chạy tại thư mục chứa `compose.yaml`. Git ở gốc quản lý hệ thống; Git panel trong Jupyter quản lý code trong workspace.

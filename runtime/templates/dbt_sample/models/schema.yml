@@ -1,0 +1,19 @@
+version: 2
+seeds:
+  - name: sample_orders
+    description: Five example orders loaded from a CSV seed.
+    columns:
+      - name: order_id
+        data_tests: [not_null, unique]
+      - name: customer_id
+        data_tests: [not_null]
+      - name: amount
+        data_tests: [not_null]
+models:
+  - name: customer_totals
+    description: Total order amount and order count for each customer.
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+      - name: total_amount
+        data_tests: [not_null]

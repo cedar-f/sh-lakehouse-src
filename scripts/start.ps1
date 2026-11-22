@@ -28,6 +28,7 @@ Invoke-Compose -ComposeArgs @('config', '--quiet')
 if (-not $SkipBuild) { Invoke-Compose -ComposeArgs @('build') }
 Invoke-Compose -ComposeArgs @('run', '--rm', '--no-deps', '--user', 'root', 'notebook', 'bash', '-c',
     'chown -R 1000:1000 /workspace /home/analyst/.ivy2 /home/analyst/.ssh; chmod 700 /home/analyst/.ssh')
+Invoke-Compose -ComposeArgs @('up', '-d', '--force-recreate', '--wait', '--wait-timeout', '900', 'bootstrap')
 Invoke-Compose -ComposeArgs @('up', '-d', '--wait', '--wait-timeout', '900')
 Write-Host 'Lakehouse started. Open http://localhost:8888/lab (or NOTEBOOK_PORT from .env).'
 Write-Host 'Use JUPYTER_TOKEN from .env. Kestra uses KESTRA_USER / KESTRA_PASSWORD.'

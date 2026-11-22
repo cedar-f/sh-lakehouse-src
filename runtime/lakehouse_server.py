@@ -13,6 +13,7 @@ from jupyter_server.utils import url_path_join
 from tornado import web
 from config import ROOT, RUNTIME, identifier, uc, all_catalogs, timezone_name
 from cluster_restarts import ClusterRestarts
+from file_deletion import delete_batch, delete_target
 
 def _jupyter_server_extension_points(): return [{'module':'lakehouse_server'}]
 
@@ -137,6 +138,9 @@ class API(JupyterHandler):
             elif path=='cluster/restart': result=await self.restarts.start(data)
             elif path in ('sql','config','jobs','flows','maintenance'): result=await self.runner('POST',path,data)
             elif path.startswith('flows/') and path.endswith('/execute'): result=await self.runner('POST',path,data)
+            elif path=='files/delete':
+                delete_target(data)
+                result=await asyncio.to_thread(delete_batch,storage(),os.environ['R2_BUCKET'],data)
             elif path=='upload/start':
                 key=data['key']
                 if not key.startswith('incoming/') or '..' in key.split('/') or key.endswith('/') or len(key)>1000:

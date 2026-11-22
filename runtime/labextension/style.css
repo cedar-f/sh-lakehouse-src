@@ -17,6 +17,10 @@
 .lh-tree-status,.lh-tree-empty{padding:5px 8px;font-size:12px}
 .lh-tree-status:empty{display:none}
 .lh-root .lh-tree-more{margin:5px 7px;font-size:12px}
+.lh-root .lh-tree-delete{flex:0 0 auto;padding:3px 8px;font-size:11px;color:var(--jp-error-color1)}
+.lh-root .lh-tree-delete:hover{border-color:var(--jp-error-color1)}
+.lh-delete-path{display:block;white-space:pre-wrap;overflow-wrap:anywhere;max-width:500px}
+.lh-delete-status .lh-card{overflow-wrap:anywhere}
 .lh-root button:disabled{opacity:.55;cursor:wait}
 .lh-root .lh-kernel-row{display:flex;gap:9px;align-items:center;margin:9px 0;overflow-wrap:anywhere}
 .lh-kernel-row input{flex:0 0 auto}

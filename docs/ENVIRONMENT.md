@@ -58,6 +58,7 @@ Không đổi POSTGRES_PASSWORD của `.env` như cách reset database đã tồ
 |---|---|---|
 | DEFAULT_CATALOG | lakehouse | Catalog bootstrap và mặc định ban đầu |
 | DEFAULT_SCHEMA | default | Schema mặc định ban đầu |
+| SEED_SAMPLE_DBT | true | Tạo dbt_sample và workflow mẫu khi thiếu; không ghi đè hoặc tự chạy |
 | SPARK_THREADS | auto | local[*] hoặc số CPU threads mỗi Spark driver |
 | SPARK_DRIVER_MEMORY | 4g | Heap mỗi Spark JVM |
 | SPARK_SHUFFLE_PARTITIONS | 8 | Số partition shuffle mặc định |
