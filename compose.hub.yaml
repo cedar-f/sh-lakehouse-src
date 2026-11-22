@@ -1,0 +1,13 @@
+# Optional replacement for the single-user notebook UI.
+services:
+  notebook:
+    user: root
+    command: [python3, /opt/lakehouse/start_hub.py]
+    volumes:
+      - hub_home:/home
+      - hub_state:/srv/jupyterhub
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:8888/hub/health > /dev/null"]
+volumes:
+  hub_home:
+  hub_state:

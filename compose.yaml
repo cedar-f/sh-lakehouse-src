@@ -1,0 +1,207 @@
+name: r2-lakehouse-v3
+x-runtime: &runtime
+  image: r2-lakehouse-v3-runtime:local
+  build: ./runtime
+  init: true
+  restart: unless-stopped
+  logging: &bounded-logs
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+  env_file: .env
+  environment: &env
+    TZ: ${TZ:-Asia/Ho_Chi_Minh}
+    RUNS_ROOT: /var/lib/lakehouse/runs
+    RUNTIME_ROOT: /var/lib/lakehouse/runtime
+    UC_URL: http://catalog:8080
+    SQL_HOST: sql
+    RUNNER_URL: http://runner:8765
+    KESTRA_URL: http://kestra:8080
+    PYTHONPATH: /opt/lakehouse
+    PYTHONDONTWRITEBYTECODE: '1'
+    PYSPARK_PYTHON: /usr/bin/python3
+    SPARK_LOCAL_IP: 127.0.0.1
+  volumes:
+    - ${WORKSPACE_DIR:-./workspace}:/workspace
+    - lakehouse_data:/var/lib/lakehouse
+    - spark_ivy:/home/analyst/.ivy2
+    - git_ssh:/home/analyst/.ssh
+  depends_on:
+    catalog: {condition: service_healthy}
+
+services:
+  postgres:
+    image: postgres:16.6
+    restart: unless-stopped
+    logging: *bounded-logs
+    environment:
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+      PGTZ: ${TZ:-Asia/Ho_Chi_Minh}
+      POSTGRES_USER: lakehouse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init.sh}
+      POSTGRES_DB: unitycatalog
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/10-kestra.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U lakehouse -d unitycatalog]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  catalog:
+    build: ./catalog
+    image: r2-lakehouse-v3-catalog:local
+    init: true
+    restart: unless-stopped
+    logging: *bounded-logs
+    env_file: .env
+    environment:
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+      JAVA_TOOL_OPTIONS: -Duser.timezone=${TZ:-Asia/Ho_Chi_Minh}
+      S3_ENDPOINT: ${S3_ENDPOINT:-https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com}
+      AWS_ENDPOINT_URL_S3: ${S3_ENDPOINT:-https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com}
+      AWS_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      AWS_REGION: auto
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O - http://localhost:8080/api/2.1/unity-catalog/catalogs > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  runtime-init:
+    <<: *runtime
+    user: root
+    restart: 'no'
+    command: [python3, /opt/lakehouse/migrate_runtime.py]
+    depends_on: {}
+
+  bootstrap:
+    <<: *runtime
+    restart: 'no'
+    command: [python3, /opt/lakehouse/bootstrap.py]
+    depends_on:
+      catalog: {condition: service_healthy}
+      runtime-init: {condition: service_completed_successfully}
+
+  notebook:
+    <<: *runtime
+    environment:
+      <<: *env
+      LAKEHOUSE_SERVICE: notebook
+    command: [bash, /opt/lakehouse/start.sh, notebook]
+    mem_limit: ${NOTEBOOK_MEMORY:-6g}
+    ports: ["${BIND_IP:-127.0.0.1}:${NOTEBOOK_PORT:-8888}:8888"]
+    depends_on:
+      bootstrap: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python3, /opt/lakehouse/health.py, notebook]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  sql:
+    <<: *runtime
+    environment:
+      <<: *env
+      LAKEHOUSE_SERVICE: sql
+    command: [bash, /opt/lakehouse/start.sh, sql]
+    mem_limit: ${SQL_MEMORY:-6g}
+    ports: ["${SQL_BIND_IP:-127.0.0.1}:${SQL_PORT:-10000}:10000"]
+    volumes:
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+      - lakehouse_data:/var/lib/lakehouse
+      - spark_ivy_sql:/home/analyst/.ivy2
+    depends_on:
+      bootstrap: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python3, /opt/lakehouse/health.py, sql]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+
+  runner:
+    <<: *runtime
+    environment:
+      <<: *env
+      LAKEHOUSE_SERVICE: runner
+    command: [python3, /opt/lakehouse/runner.py]
+    mem_limit: ${RUNNER_MEMORY:-6g}
+    depends_on:
+      sql: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python3, /opt/lakehouse/health.py, runner]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  kestra:
+    image: kestra/kestra@sha256:494d2e81aacd92c0353098822aa7214833f8b1ed7a8fe6b5a46b79b1caec3ec5
+    mem_limit: ${KESTRA_MEMORY:-4g}
+    restart: unless-stopped
+    logging: *bounded-logs
+    user: root
+    command: server standalone
+    ports: ["${BIND_IP:-127.0.0.1}:${KESTRA_PORT:-8082}:8080"]
+    environment:
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+      JAVA_OPTS: ${KESTRA_JAVA_OPTS:--Xms256m -Xmx2g -XX:ActiveProcessorCount=2} -Duser.timezone=${TZ:-Asia/Ho_Chi_Minh}
+      ENV_RUNNER_TOKEN: ${RUNNER_TOKEN}
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driver-class-name: org.postgresql.Driver
+            username: lakehouse
+            password: ${POSTGRES_PASSWORD}
+        kestra:
+          server:
+            basic-auth:
+              username: ${KESTRA_USER}
+              password: ${KESTRA_PASSWORD}
+          repository:
+            type: postgres
+          queue:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: /app/storage
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+    volumes:
+      - kestra_storage:/app/storage
+      - kestra_tmp:/tmp/kestra-wd
+    depends_on:
+      postgres: {condition: service_healthy}
+      runner: {condition: service_healthy}
+
+  backup:
+    profiles: [tools]
+    image: r2-lakehouse-v3-runtime:local
+    user: root
+    command: [python3, /opt/lakehouse/backup_storage.py]
+    env_file: .env
+    environment:
+      PYTHONPATH: /opt/lakehouse
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+    volumes:
+      - ${WORKSPACE_DIR:-./workspace}:/workspace:ro
+      - lakehouse_data:/var/lib/lakehouse:ro
+      - ./backups:/backups
+      - kestra_storage:/kestra-storage:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+
+volumes:
+  lakehouse_data:
+  postgres_data:
+  spark_ivy:
+  spark_ivy_sql:
+  git_ssh:
+  kestra_storage:
+  kestra_tmp:

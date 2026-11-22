@@ -1,0 +1,6 @@
+services:
+  backup:
+    volumes:
+      - lakehouse_data:/var/lib/lakehouse
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+      - kestra_storage:/kestra-storage

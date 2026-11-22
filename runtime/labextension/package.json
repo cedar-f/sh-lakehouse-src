@@ -1,0 +1,16 @@
+{
+  "name": "@lakehouse/workspace",
+  "version": "3.1.1",
+  "description": "Native catalog, R2, compute, dbt and workflow panels for JupyterLab",
+  "main": "index.js",
+  "style": "style.css",
+  "license": "MIT",
+  "dependencies": {
+    "@jupyterlab/application": "^4.4.0",
+    "@jupyterlab/apputils": "^4.5.0",
+    "@jupyterlab/services": "^7.4.0",
+    "@lumino/widgets": "^2.5.0"
+  },
+  "devDependencies": {"@jupyterlab/builder": "^4.4.0"},
+  "jupyterlab": {"extension": true, "outputDir": "labextension"}
+}

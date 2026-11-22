@@ -1,0 +1,10 @@
+{
+  "version": "3.1.1",
+  "release_date": "2026-11-22",
+  "target": "Windows 11 / Docker Desktop Linux; Ubuntu 22.04 / Docker Engine + Compose",
+  "documentation": "docs/README.md",
+  "validation": "docs/VALIDATION.md",
+  "features": "docs/FEATURES.md",
+  "distribution": "Source only; workspace, credentials, volumes and backups excluded from Git",
+  "git_guide": "docs/GIT_SOURCE.md"
+}
