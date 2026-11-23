@@ -36,7 +36,7 @@ def uc(method, resource, data=None, params=None):
     req = urllib.request.Request(url, data=body, method=method,
         headers={'Content-Type': 'application/json', 'Authorization': 'Bearer not-used'})
     with urllib.request.urlopen(req, timeout=30) as response:
-        return json.load(response)
+        return {} if method=='DELETE' else json.load(response)
 
 def all_catalogs():
     items, token = [], None

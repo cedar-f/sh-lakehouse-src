@@ -2,7 +2,7 @@ import { Widget } from '@lumino/widgets';
 import { showDialog, Dialog } from '@jupyterlab/apputils';
 
 export async function createCatalog(root,{api,el,field,button,table,notebook,open,ask}){
-  root.append(el('h2','','Catalog'),el('p','lh-muted','Persistent tables, volumes and registered function definitions. Function code is not executed here.'));
+  root.append(el('h2','','Catalog'),el('p','lh-muted','Persistent tables, volumes and functions. Call SQL scalar functions by full name in notebooks, SQL editor or workflow SQL tasks.'));
   const bar=el('div','lh-toolbar'),catalog=el('select'),schema=el('select'),kind=el('select'),search=el('input');
   catalog.setAttribute('aria-label','Catalog');schema.setAttribute('aria-label','Schema');kind.setAttribute('aria-label','Asset type');search.setAttribute('aria-label','Search catalog assets');search.placeholder='Search name';
   for(const [value,label] of [['all','All assets'],['tables','Tables'],['functions','Functions'],['volumes','Volumes']]){const option=el('option','',label);option.value=value;kind.append(option);}
@@ -82,7 +82,7 @@ export async function createCatalog(root,{api,el,field,button,table,notebook,ope
   }
   async function showFunction(name){
     active={kind:'function',name};const f=await api('function?name='+encodeURIComponent(name));if(active?.name!==name||active.kind!=='function')return;
-    detail.replaceChildren(el('h3','',name),el('p','lh-muted',f.comment||''),el('p','lh-muted','Registered definition only. No execution in Spark/MCP is enabled by this screen.'),actionRow([button('Copy full name',()=>copy(name)),button('Delete function',()=>deleteFunction(name))]));
+    detail.replaceChildren(el('h3','',name),el('p','lh-muted',f.comment||''),el('p','lh-muted',f.routine_body==='SQL'?'Supported SQL scalar expressions can run by full name in notebooks, SQL editor and workflow SQL tasks.':'Python/external definition only; an execution runtime is not configured.'),actionRow([button('Copy full name',()=>copy(name)),button('Delete function',()=>deleteFunction(name))]));
     table(detail,['Language','Returns','SQL access','Deterministic'],[[f.external_language||f.routine_body,f.full_data_type||f.data_type,f.sql_data_access||'Unspecified',f.is_deterministic===undefined?'Unspecified':String(f.is_deterministic)]]);
     table(detail,['Parameter','Type','Default','Comment'],(f.input_params?.parameters||[]).map(p=>[p.name,p.type_text,p.parameter_default??'',p.comment||'']));detail.append(el('pre','lh-code',f.routine_definition||''));
   }

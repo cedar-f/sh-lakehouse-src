@@ -32,6 +32,7 @@
 | git_integration.py / git_askpass.py / labextension/github.js | Git onboarding/clone/ignore, bounded preview/commit/push và SSH agent/askpass dùng chung với native Git |
 | catalog_registry.py / registry_service.py | R2 manifest validation/CAS/lineage, paginated UC export, startup replay và UC proxy synchronization |
 | catalog_functions.py / catalog_actions.py / labextension/catalog.js | Function definition validation/UC request, confirmed DROP TABLE và Catalog filters/selection/copy/function UI |
+| sql_functions.py / function_sql_adapters.py / function_mutations.py | Tokenized SQL function DDL/call gateway, notebook/Thrift adapters, compare-and-replace và intent recovery |
 | file_deletion.py | Validate target/confirmation, active upload preflight, batch delete và partial errors |
 | labextension/index.js | Đăng ký sidebar/tab, API helper và các panel chính |
 | labextension/filetree.js / compute.js / workflow.js / history.js / style.css | Tree, restart UI, graph editor, history/detail và CSS |
@@ -42,7 +43,7 @@
 Docker Linux containers và Git đủ để build/test trong container. Không bắt buộc cài Spark/Java/dbt trên host. Thay source ở Git branch riêng, dùng workspace/bucket thử riêng nếu test ghi dữ liệu.
 
 ```bash
-git switch -c feature/ten-thay-doi
+git switch -c codex/ten-thay-doi
 docker build -t r2-lakehouse-v3-runtime:local runtime
 ```
 
@@ -78,6 +79,7 @@ Trong virtualenv riêng, cài `tests/requirements-ui.txt`, cài Chromium bằng 
 | `python tests/ui_compute_restart.py` | Restart/configure Spark và thao tác notebook; dùng môi trường riêng, đọc fixture/cleanup trong script |
 | `python tests/ui_git_setup.py` | Tạo/xóa container Docker riêng với repo bare local; kiểm GitHub wizard, key encrypted, native Git và restart. Không đọc .env hoặc gọi GitHub/R2. LAKEHOUSE_GIT_TEST_IMAGE chọn runtime image |
 | `python tests/registry_integration.py` | Docker UC/PostgreSQL riêng, xóa DB fixture và replay qua file-backed fake R2; không chạm env/volume/R2 production. Chọn image bằng LAKEHOUSE_REGISTRY_TEST_IMAGE/LAKEHOUSE_CATALOG_TEST_IMAGE |
+| `python tests/sql_functions_integration.py` | UC/PostgreSQL + Spark notebook/Thrift + runner SQL/workflow riêng; kiểm CREATE/REPLACE/call/drop, Spark restart và UC reset/replay qua file-backed fake R2. Không đọc env/R2/volume production. LAKEHOUSE_FUNCTION_TEST_IMAGE và LAKEHOUSE_CATALOG_TEST_IMAGE chọn image; build runtime từ source hiện tại trước khi chạy |
 | `python tests/ui_catalog.py` | Container Jupyter/API fixtures riêng; kiểm filter retention, clipboard, cancel/partial multi-delete và function create/view/delete; không dùng env/R2. LAKEHOUSE_CATALOG_UI_IMAGE chọn image |
 | `python tests/ui_dbt_project.py` | Jupyter container riêng với API fixtures; kiểm project UI/Open Docs/legacy workflow, không đọc env/R2. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |
 | `python tests/dbt_project_integration.py` | Container Spark Thrift/Delta/dbt riêng với catalog local, kiểm source → schema a → schema b, tests và Docs; tải Maven jars, không dùng UC/R2/env production. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |

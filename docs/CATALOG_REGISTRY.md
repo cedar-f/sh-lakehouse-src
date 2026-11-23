@@ -86,6 +86,8 @@ Không đưa PostgreSQL data directory lên R2/rclone mount. Không copy file `.
 
 Catalog UI quản lý function theo [FUNCTIONS](FUNCTIONS.md). Function definition được sync/replay, không là managed compute hoặc MCP hosting. Xóa function/table được đồng bộ để không phục hồi metadata đã xóa sau một lần sync thành công. Delete table trên UI đi qua Spark DROP TABLE; external data không tự xóa khỏi R2, managed data có thể bị xóa theo engine. Không dùng UC metadata DELETE để giả thực hiện DROP có quản lý dữ liệu.
 
+Notebook/SQL editor/workflow SQL tạo SQL scalar function bằng DDL qua cùng registry. SELECT đọc definition và biên dịch vào session Spark; startup replay vẫn chỉ phục hồi metadata. `OR REPLACE` dùng compare-and-replace có `function_replacement` intent trong state local trước delete/create. Sync phải reconcile intent trước export; nếu không khôi phục được definition đang thiếu hoặc có conflict, giữ snapshot R2 cuối và chặn metadata writes. Không xóa state/intent khi đang pending; kiểm UC definition, registry logs và kết nối rồi Sync lại. UC delete/create không atomic và không bảo toàn ID/grants/ownership.
+
 ## Kiểm thử
 
 Unit/contract ở runtime/tests/test_catalog_registry.py và test_registry_service.py kiểm empty namespace, properties/root/comment, pagination, replay/resume/conflict, conditional writes, failed sync và managed inventory guard. Kiểm R2 thật/UC thật trên deployment theo [VALIDATION](VALIDATION.md) và [ACCEPTANCE](ACCEPTANCE.md); mock store không thay credential/provider integration.

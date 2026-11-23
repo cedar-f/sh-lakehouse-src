@@ -47,7 +47,7 @@ Thao tác dùng Spark DROP TABLE, không PURGE và không xóa raw object R2 tr�
 
 ### Functions
 
-Bấm + Function để đăng ký Python/SQL definition, bấm tên để xem params/types/comment/code, Copy full name hoặc Delete function có xác nhận full name. UC/R2 chỉ lưu định nghĩa, UI chưa thực thi Spark UDF/MCP. Hướng dẫn và giới hạn nằm ở [FUNCTIONS](FUNCTIONS.md).
+Bấm + Function để đăng ký Python/SQL definition, bấm tên để xem params/types/comment/code, Copy full name hoặc Delete function có xác nhận full name. SQL scalar function cũng có thể tạo bằng `CREATE FUNCTION catalog.schema.function(...) RETURNS ... RETURN ...` trong notebook `%%sql`, SQL editor hoặc workflow SQL rồi gọi bằng full name; tự đăng ký UC/R2 và nạp lại sau restart. Python definition chưa có runtime; MCP chưa tích hợp. Ví dụ, cách dùng `OR REPLACE`/`SHOW`/`DROP` và giới hạn tại [FUNCTIONS](FUNCTIONS.md).
 
 ## Files trên R2
 

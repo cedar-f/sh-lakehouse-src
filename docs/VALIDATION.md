@@ -19,6 +19,10 @@ Lệnh và side effects của các test ở [DEVELOPMENT](DEVELOPMENT.md). Chạ
 
 Tạo catalog rỗng, schema rỗng có comment/properties/root riêng, external volume và external Delta table và Python function có input/return types/comment/body sandbox; sync và kiểm current.json. Dựng UC đích trống cùng registry, kiểm tên/comment/properties/root, volume/table location, function definition và query data đã biết. Kiểm pagination, restore bị ngắt, JSON/bucket/path lỗi, R2 403, stale ETag và UC conflict. Managed asset phải hiện unrestored, giữ inventory và không tự biến thành external. Không xóa UC thật để test khi chưa xác định dữ liệu thuộc diện thử.
 
+## Kiểm tra SQL functions
+
+Trong namespace sandbox, chạy CREATE FUNCTION và SELECT từ notebook, SQL editor và workflow SQL. Kiểm tham số/kiểu/body/comment trong Catalog và R2; biểu thức lỗi không được đăng ký. Thử function gọi function khác, OR REPLACE cùng chữ ký, signature/conflict bị từ chối, DROP rồi không gọi được nữa. Restart Spark và gọi lại từ session mới; replay registry sang UC fixture trống rồi gọi lại mà không CREATE. Kiểm failed-create recovery và R2 pending giữ snapshot trước đó; không dùng database thật để bơm lỗi. `tests/sql_functions_integration.py` dùng Spark/UC thật với fake R2; vẫn cần xác nhận cloud R2/deployment riêng.
+
 ## Kiểm tra Git
 
 Kiểm cả repo mới và repo có code. Repo mới: tạo GitHub repo trống → init/connect → ignore tự động → SSH key/Unlock → Review → commit → push/upstream. Repo có code: clone vào folder mới → giữ history/upstream → ignore được bổ sung → native Git commit/push tiếp. Cần thử wrong passphrase, key có sẵn không bị ghi đè, remote khác/non-empty bị từ chối, file đổi sau preview, custom ignore được giữ và container restart yêu cầu unlock lại encrypted key.

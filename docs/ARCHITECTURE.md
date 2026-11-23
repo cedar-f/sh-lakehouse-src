@@ -94,6 +94,12 @@ Toàn bộ client project dùng UC_URL registry proxy, backend catalog không pu
 
 Registry replay khi UC trống diễn ra trước bootstrap. UC nonempty khác registry không có lineage khớp bị chặn. Partial replay resume không ghi đè object có định nghĩa khác. Managed asset không bị biến thành external; bảng/volume chưa replay vẫn giữ inventory và có cảnh báo Compute. Chi tiết và giới hạn ở [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
 
+### SQL scalar functions
+
+`sql_functions.py` tokenize managed SQL, nhận DDL function tên ba phần và lưu native definition qua UC_URL. `function_sql_adapters.py` gắn adapter vào notebook SparkSession; runner.sql_query dùng cùng engine cho SQL editor/background/workflow SQL. Lần SELECT đọc definition và các dependency từ UC, biên dịch SQL temporary function bằng Spark 4 rồi thay full name tại token call site; không thay chuỗi/comment. Connector UC chưa cung cấp FunctionCatalog, nên raw JDBC/Thrift/dbt/DataFrame expr không được tích hợp bằng đường này. Phạm vi tại [FUNCTIONS](FUNCTIONS.md).
+
+`function_mutations.py` thực hiện compare-and-replace dưới khóa registry vì UC chưa có PATCH. Replacement intent được ghi state local trước delete và được reconcile trước export; thiếu definition thì thử restore bản cũ, conflict khác nội dung thì chặn sync. CREATE/SELECT không chạy Python source. Startup replay function chỉ phục hồi metadata, lần gọi managed SQL mới nạp body vào Spark; không cần tạo lại function sau restart.
+
 ## GitHub onboarding và native Git
 
 GitHub panel gọi git_integration.py qua authenticated Jupyter gateway. Init/connect lưu Git author, origin SSH và core.sshCommand theo repo; clone giữ default branch/history/upstream. Cả hai tự merge managed `.gitignore`. Commit đầu chỉ stage file đã review; native Git dùng cùng `.git` sau đó.

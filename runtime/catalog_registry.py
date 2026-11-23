@@ -101,7 +101,8 @@ class Upstream:
             response = client.request(method, self.base + path, json=data, params=params,
                                       headers={'Authorization': 'Bearer not-used'})
             response.raise_for_status()
-            return response.json() if response.content else {}
+            # UC 0.7 DELETE can return a plain-text "200 OK" acknowledgement.
+            return response.json() if response.content and method!='DELETE' else {}
 
     def listing(self, kind, **params):
         result, seen = [], set()
@@ -214,6 +215,11 @@ class Registry:
                 _, current_etag = self.read()
                 if current_etag != self.etag:
                     raise ValueError('R2 registry changed or disappeared externally; refusing a stale writer')
+                if self.state.get('function_replacement'):
+                    from function_mutations import recover_replacement
+                    recover_replacement(self.uc,self.state['function_replacement'])
+                    self.state.pop('function_replacement')
+                    self.save()
                 live = self.uc.scan(self.bucket)
                 # Keep inventory of unsupported managed objects after portable replay.
                 keep = []

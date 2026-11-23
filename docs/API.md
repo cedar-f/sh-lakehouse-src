@@ -177,3 +177,11 @@ Client bên ngoài nên dùng HTTPS URL hoặc tunnel. Synchronous runner POST /
 - Table batch trả results[{name,status,error?,note?}], deleted, stopped. Lỗi một thao tác dừng phần còn lại; không transaction toàn batch. 404 lookup là MISSING, không thực thi DROP. Lỗi sau gửi DDL có thể đã áp dụng, cần kiểm trước retry.
 
 Gateway yêu cầu Jupyter auth/XSRF; runner yêu cầu X-Runner-Token và không public. Function UC POST phải dùng wrapper function_info khi replay. Registry v2 giữ functions, v1 được nâng cấp conditional; xem [FUNCTIONS](FUNCTIONS.md) và [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+
+### Managed SQL functions
+
+POST gateway `sql` và private runner `/sql` giữ payload `{sql,catalog?}`/response `{columns,rows,truncated?}` như SQL thường. Các đường này, workflow SQL và notebook `%%sql`/session `spark.sql` hỗ trợ `CREATE [OR REPLACE] FUNCTION [IF NOT EXISTS] c.s.f(...) RETURNS type RETURN expression`, gọi `SELECT c.s.f(...)`, `SHOW FUNCTIONS IN c.s`, `DESCRIBE FUNCTION [EXTENDED] c.s.f`, `DROP FUNCTION [IF EXISTS] c.s.f`. CREATE/DROP trả bảng một cột `message`; SHOW trả `function`; DESCRIBE trả `property,value`. Batch tối đa 100 statement tuần tự, trả kết quả cuối, không atomic.
+
+Spark biên dịch expression trước UC POST; SELECT đọc definition UC và tạo SQL temporary function nội bộ trong session. Function cần tên ba phần và kiểu/body thuộc [FUNCTIONS](FUNCTIONS.md). Raw Thrift/dbt/Power BI không đi qua adapter này; Python/external definitions chưa thực thi.
+
+Registry private POST `/registry/functions/replace` cần `X-Runner-Token`; payload `{function_info:{...},expected:"<sha256>"}`. `expected` do `function_mutations.digest` tính từ allowlisted definition hiện tại, bỏ audit/empty fields. Không tính từ toàn bộ JSON GET tùy ý. Endpoint giữ khóa metadata, kiểm expected (409 nếu đổi), chỉ nhận SQL cùng chữ ký params (400 nếu khác), ghi intent local rồi delete/create và sync R2. UC không có atomic replace; ID/ownership/grants không được bảo toàn. 503 có thể nghĩa UC đã đổi nhưng R2 pending; kiểm definition và registry trước retry. Intent giúp phục hồi definition cũ nếu delete thành công nhưng create thất bại; không được bỏ marker bằng tay. Đây là API điều phối nội bộ, không publish host port.

@@ -135,3 +135,5 @@ Các thao tác table cleanup/VACUUM cần chính sách Delta và reader retentio
 ## Nâng cấp Catalog functions / registry v2
 
 Upgrade bằng git pull và rebuild thông thường, không reset metadata. Đợi registry healthy, kiểm Compute counts/functions và Sync trước khi dựng lại host. Manifest v1 tự nâng v2 tại cùng key bằng conditional PUT; code cũ không đọc v2. Function definition được replay, không thực thi code khi startup. Nếu cần rollback, dừng writers/registry và dùng quy trình restore/registry disabled trong [DISASTER_RECOVERY](DISASTER_RECOVERY.md), không sửa version manifest bằng tay. Xem [FUNCTIONS](FUNCTIONS.md).
+
+Sau nâng cấp managed SQL functions, restart notebook kernel để nạp wrapper `spark.sql`; SQL/runner cần image mới. Chạy thử CREATE/SELECT trong namespace sandbox và gọi lại sau restart Spark. UC/R2 data/metadata hiện có được giữ. Nếu OR REPLACE lỗi, đọc lại function và kiểm registry status/logs trước retry: state có thể giữ `function_replacement` intent để phục hồi an toàn. Sửa lỗi kết nối rồi Sync lại; không xóa marker/database hay tự sửa current.json. Raw Thrift/dbt không tự sử dụng adapter notebook/runner.

@@ -79,6 +79,16 @@ def manual_sync(x_runner_token: str = Header(default='')):
         raise HTTPException(503, 'Registry sync failed; inspect service logs')
 
 
+@app.post('/registry/functions/replace')
+def function_replace(payload: dict,x_runner_token: str = Header(default='')):
+    auth(x_runner_token)
+    from catalog_registry import Upstream
+    from function_mutations import replace_function
+    try:
+        with guard:return replace_function(payload,Upstream(),engine)
+    except ValueError as error:raise HTTPException(400,str(error))
+
+
 def is_metadata(method, path):
     return method in ('POST', 'PATCH', 'PUT', 'DELETE') and any(
         path == 'api/2.1/unity-catalog/' + kind or path.startswith('api/2.1/unity-catalog/' + kind + '/')

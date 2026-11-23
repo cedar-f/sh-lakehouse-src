@@ -8,7 +8,8 @@ def create_spark():
     for key,value in spark_conf().items(): builder = builder.config(key,value)
     spark = builder.getOrCreate()
     spark.sql('USE SCHEMA `'+settings()['default_schema']+'`')
-    return spark
+    from function_sql_adapters import install
+    return install(spark)
 
 def refresh_catalogs(spark):
     conf = spark_conf()

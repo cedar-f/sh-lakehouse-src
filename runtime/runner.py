@@ -48,10 +48,17 @@ def sql_query(sql,catalog=None,schema=None):
     connection=hive.Connection(host=os.getenv('SQL_HOST','sql'),port=10000,auth='NOSASL',
         username='lakehouse',database=identifier(schema or settings()['default_schema']),configuration=conf)
     try:
-        cursor=connection.cursor(); cursor.execute(sql)
-        if not cursor.description: return {'columns':[],'rows':[]}
-        rows=cursor.fetchmany(1001)
-        return {'columns':[c[0] for c in cursor.description],'rows':[list(r) for r in rows[:1000]],'truncated':len(rows)>1000}
+        from sql_functions import SQLFunctions
+        from function_sql_adapters import replace
+        def execute(statement):
+            cursor=connection.cursor()
+            try:
+                cursor.execute(statement)
+                if not cursor.description:return {'columns':[],'rows':[]}
+                rows=cursor.fetchmany(1001)
+                return {'columns':[c[0] for c in cursor.description],'rows':[list(r) for r in rows[:1000]],'truncated':len(rows)>1000}
+            finally:cursor.close()
+        return SQLFunctions(execute,lambda cols,rows:{'columns':cols,'rows':rows},replace=replace).run(sql)
     finally: connection.close()
 
 def wait_for_sql_ready(timeout=120):

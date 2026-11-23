@@ -70,6 +70,6 @@ Xác nhận người dùng thuộc cùng trust boundary; kiểm tra HTTPS/login,
 
 ## Catalog functions và thao tác xóa bảng
 
-Function UI chỉ đăng ký/đọc/xóa definition, không eval/exec source. UC authorization vẫn disabled; người dùng workspace tin cậy quản lý cùng assets. Definition source/default values nằm trong private R2 registry, không chứa credential hardcode. Register không tự cấp runtime execution hoặc MCP quyền truy cập.
+Function UI chỉ đăng ký/đọc/xóa definition. Managed SQL trong notebook/editor/workflow biên dịch và chạy SQL scalar expression bằng Spark, không Python eval/exec. Chỉ cho người dùng workspace tin cậy tạo/sửa body; giới hạn expression không phải sandbox cho người dùng không tin cậy. UC authorization vẫn disabled, không có EXECUTE/RBAC riêng theo user. Definition source/default values nằm trong private R2 registry, không chứa credential hardcode. Python/external definition chưa có runtime; MCP chưa tích hợp. Endpoint replace cần RUNNER_TOKEN, không publish registry/runner. Xem giới hạn tại [FUNCTIONS](FUNCTIONS.md).
 
 Delete table yêu cầu exact full-name list và xác nhận DELETE, giới hạn 100, whitelist identifier và quote DDL. Nó dùng Spark DROP TABLE nên có thể ảnh hưởng data managed và model downstream; không có thùng rác/rollback batch. API xác thực không thay thế quyền bảng theo user. Không thử delete trên dữ liệu production để xác minh UI; dùng fixtures hoặc bảng sandbox có chủ đích.
