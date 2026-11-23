@@ -83,6 +83,16 @@ def test_new_table_cannot_silently_replace_unrestored_managed_inventory(monkeypa
     ('GET','api/2.1/unity-catalog/catalogs',False),
     ('POST','api/2.1/unity-catalog/temporary-table-credentials',False),
     ('POST','api/2.1/unity-catalog/tablesx',False),
+    ('POST','api/2.1/unity-catalog/functions',True),
+    ('DELETE','api/2.1/unity-catalog/functions/a.b.c',True),
 ])
 def test_metadata_mutation_classification(method,path,expected):
     assert service.is_metadata(method,path)==expected
+
+
+def test_function_ack_requires_r2_sync(monkeypatch):
+    engine=Engine();engine.fail=True;client_stub(monkeypatch,engine)
+    with pytest.raises(HTTPException,match='already have succeeded'):
+        service.forward('POST','api/2.1/unity-catalog/functions','catalog_name=sales',
+                        b'{"function_info":{}}','application/json','')
+    assert engine.events==['dirty','upstream','sync']

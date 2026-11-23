@@ -96,3 +96,9 @@ HTTPS: certificate đúng hostname, login thành công, notebook WebSocket/termi
 Restore drill: dùng snapshot đã xác minh, host/project/workspace đích sạch và không có writer cũ. Theo [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md), xác nhận catalog/table/data checksum hoặc aggregate đã biết, notebook/workflow và artifact. Ghi RTO đo được, snapshot age và các data không được backup.
 
 Người vận hành tự thực hiện clone → cấu hình → start → sample → report → backup/restore thử → chẩn đoán lỗi theo log. Ghi ngoại lệ và câu hỏi còn thiếu trong hồ sơ nghiệm thu, cập nhật hướng dẫn khi contract thay đổi. Chỉ ký nghiệm thu khi các mục bắt buộc có kết quả và người chịu trách nhiệm.
+
+## Catalog refresh, functions và batch delete
+
+Trên namespace sandbox, chọn catalog/schema/type/search rồi Refresh: các lựa chọn còn hợp lệ được giữ. Copy full name và kiểm đúng catalog.schema.table. Cancel hộp xóa không tạo request; tick hai bảng thử, xác nhận danh sách và DELETE, kiểm kết quả từng bảng. Kiểm external files còn sau DROP và managed semantics theo engine; không dùng production table để test. Bơm lỗi có kiểm soát để xác nhận partial result không được báo là toàn batch thành công.
+
+Tạo Python function có params/return type/comment/body; kiểm detail và registry counts/functions. Dùng UC/PostgreSQL fixture riêng để xuất → xóa DB fixture → replay và xác nhận definition giữ nguyên; không chạy source trong lúc restore. Xóa function, sync, dựng fixture mới và kiểm nó không xuất hiện lại. Kiểm manifest v1 conditional-upgrade v2 và từ chối downgrade writer cũ. Registry trên R2 thật phải được nghiệm thu riêng; file-backed fake R2 không chứng minh cloud credential/provider.

@@ -30,7 +30,7 @@ flowchart LR
 ## Giao diện
 
 - Các mục Catalog, Files, Compute, SQL, dbt, Runs, Workflows, Workflow Run History, GitHub và Notebook mở thành tab trong vùng chính. Tab mới được chọn ngay; đóng/mở lại giữ nội dung đang nhập trong phiên trình duyệt.
-- **Catalog:** tạo catalog/schema, liệt kê table/volume, xem columns/location, preview và mở truy vấn thành notebook. SQL mặc định dùng catalog/schema do bạn cấu hình; bảng mới qua UC connector được đăng ký vào UC.
+- **Catalog:** tạo catalog/schema, tables/volumes/functions; giữ filters khi Refresh, copy full name và multi-select DROP TABLE có xác nhận/kết quả từng bảng. Function create/view/delete và definition R2 theo [FUNCTIONS](FUNCTIONS.md); chưa chạy function hoặc expose MCP. SQL mặc định dùng catalog/schema do bạn cấu hình; bảng mới qua UC connector được đăng ký vào UC.
 - **Files:** cây R2, download/upload nhiều file trong incoming/, progress theo part, cancel/resume. Delete file/thư mục con có confirmation, status và partial errors; root incoming, warehouse và backup được bảo vệ. Xem [REBUILD_DBT.md](REBUILD_DBT.md).
 - **Compute:** status, CPU threads, memory, shuffle, default catalog/schema, Spark config và Save & Restart Spark; Catalog registry on R2 hiển thị sync/pending/counts/unrestored và có nút Sync registry now.
 - **Notebook/SQL:** Spark và %%sql được nạp khi kernel khởi động; kết quả truy vấn hiển thị dạng bảng. SQL editor và preview giới hạn 1000 dòng.

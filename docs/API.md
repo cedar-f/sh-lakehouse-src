@@ -166,3 +166,14 @@ unset LH_API_TOKEN
 ```
 
 Client bên ngoài nên dùng HTTPS URL hoặc tunnel. Synchronous runner POST /run (Kestra dùng) chờ đến terminal, có thể trả 500 với job detail khi failed. Runner POST /workflow/execute nhận flow_b64/execution_id/inputs_b64 cho advanced flows; để compiler tạo payload này, không giả lập retry/cancellation từ HTTP client mà không kiểm tra side effects.
+
+## Catalog functions và table deletion
+
+- GET /lakehouse/api/functions?catalog=c&schema=s[&page_token=...] trả collection functions và pagination UC.
+- GET /lakehouse/api/function?name=c.s.f trả definition.
+- POST /lakehouse/api/functions nhận name/catalog_name/schema_name, language PYTHON hoặc SQL, return_type, parameters [{name,type}], body, comment. Hoặc gửi native {function_info:{...}} cho complex definition. Function body tối đa 1 MiB; không thực thi code.
+- POST /lakehouse/api/functions/delete nhận {name:"c.s.f",confirmation:"c.s.f"}; xóa qua UC_URL/registry. Không có update/replace ngầm.
+- POST /lakehouse/api/tables/delete bridge tới private runner cùng path. Payload {names:["c.s.t"],confirmed_names:["c.s.t"],confirmation:"DELETE"}; danh sách phải khớp thứ tự, 1..100 unique full names, chỉ identifier hợp lệ. Runner giữ job lock, lookup UC rồi DROP TABLE có quote từng phần và dùng schema của bảng cho connection.
+- Table batch trả results[{name,status,error?,note?}], deleted, stopped. Lỗi một thao tác dừng phần còn lại; không transaction toàn batch. 404 lookup là MISSING, không thực thi DROP. Lỗi sau gửi DDL có thể đã áp dụng, cần kiểm trước retry.
+
+Gateway yêu cầu Jupyter auth/XSRF; runner yêu cầu X-Runner-Token và không public. Function UC POST phải dùng wrapper function_info khi replay. Registry v2 giữ functions, v1 được nâng cấp conditional; xem [FUNCTIONS](FUNCTIONS.md) và [CATALOG_REGISTRY](CATALOG_REGISTRY.md).

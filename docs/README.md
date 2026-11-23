@@ -33,6 +33,7 @@ Bộ tài liệu định nghĩa hệ thống, giải thích cơ chế và hướ
 | [USER_GUIDE.md](USER_GUIDE.md) | Notebook/SQL/Catalog/Files/Compute/Git/dbt |
 | [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md) | History/logs, workflow logic, Variables/If/For each |
 | [REBUILD_DBT.md](REBUILD_DBT.md) | Bootstrap, reset, Delete, starter/report |
+| [FUNCTIONS.md](FUNCTIONS.md) | Đăng ký/xem/xóa function, definition R2, nâng registry v2 và giới hạn thực thi |
 | [DBT_PROJECTS.md](DBT_PROJECTS.md) | Catalog/schema do project quản lý, source/ref, nhiều schema và migration legacy |
 | [OPERATIONS.md](OPERATIONS.md) | Theo dõi/restart/update/cleanup và incident runbook |
 | [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md) | Backup scope, restore drill, rollback, mất R2 |

@@ -19,6 +19,7 @@ import uuid
 def stage(phase):
     from botocore.exceptions import ClientError
     from catalog_registry import Registry, Upstream
+    from catalog_functions import create_payload, definition
     class Store:
         path=Path('/fixture/current.json')
         def get_object(self,**args):
@@ -44,6 +45,10 @@ def stage(phase):
         upstream.request('POST','tables',{'name':'orders','catalog_name':'sales','schema_name':'raw','comment':'External fixture',
             'table_type':'EXTERNAL','data_source_format':'DELTA','storage_location':'s3://fixture/external/orders',
             'columns':[{'name':'id','type_text':'int','type_name':'INT','type_json':'{"name":"id","type":"integer","nullable":true,"metadata":{}}','position':0,'nullable':True}]})
+        function=create_payload({'name':'increment','catalog_name':'sales','schema_name':'raw','language':'PYTHON',
+            'return_type':'INT','parameters':[{'name':'value','type':'INT'}],'body':'return value + 1',
+            'comment':'Portable increment'})
+        upstream.request('POST','functions',function)
     registry=Registry(Store(),upstream,'fixture',Path('/tmp/registry-state.json'))
     registry.initialize()
     data=upstream.scan('fixture')
@@ -56,8 +61,11 @@ def stage(phase):
     assert data['volumes'][0]['storage_location']=='s3://fixture/incoming'
     assert data['volumes'][0]['comment']=='Landing files'
     assert data['tables'][0]['storage_location']=='s3://fixture/external/orders'
+    assert data['functions'][0]['routine_definition']=='return value + 1'
+    assert data['functions'][0]['input_params']['parameters'][0]['type_name']=='INT'
+    assert data['functions'][0]['comment']=='Portable increment'
     assert registry.ready and not registry.status()['unrestored']
-    print('PASS real UC '+phase+': empty catalog/schema, comments, properties, roots, external volume/table')
+    print('PASS real UC '+phase+': empty catalog/schema, comments, properties, roots, external volume/table, Python function definition')
 
 
 def main():

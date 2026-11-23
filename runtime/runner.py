@@ -37,7 +37,7 @@ def auth(x_runner_token:Annotated[str,Header()]=''):
 def record(directory,data):
     run_store.write_run(directory,data)
 
-def sql_query(sql,catalog=None):
+def sql_query(sql,catalog=None,schema=None):
     from pyhive import hive
     from TCLIService.ttypes import TOperationState
     conf={k:v for k,v in spark_conf().items() if k.startswith('spark.sql.catalog.')}
@@ -46,7 +46,7 @@ def sql_query(sql,catalog=None):
     # update only HiveConf and do not register catalogs in a new Spark session.
     conf={'set:hivevar:'+key:value for key,value in conf.items()}
     connection=hive.Connection(host=os.getenv('SQL_HOST','sql'),port=10000,auth='NOSASL',
-        username='lakehouse',database=settings()['default_schema'],configuration=conf)
+        username='lakehouse',database=identifier(schema or settings()['default_schema']),configuration=conf)
     try:
         cursor=connection.cursor(); cursor.execute(sql)
         if not cursor.description: return {'columns':[],'rows':[]}
@@ -294,6 +294,14 @@ def sql(payload:dict):
 
 @app.get('/config',dependencies=[Depends(auth)])
 def config_get(): return settings()
+
+
+@app.post('/tables/delete',dependencies=[Depends(auth)])
+def tables_delete(payload:dict):
+    from catalog_actions import drop_tables
+    try:
+        with LOCK:return drop_tables(payload,uc,sql_query)
+    except ValueError as error:raise HTTPException(400,str(error))
 
 @app.get('/sql/status',dependencies=[Depends(auth)])
 def sql_status(): return read_json(SQL_CONTROL/'status.json') or {'state':'UNKNOWN'}

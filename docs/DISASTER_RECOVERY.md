@@ -111,3 +111,5 @@ Ví dụ **tùy chọn** cron của đúng tài khoản vận hành, sau khi t�
 ```
 
 Thay cả hai đường dẫn tuyệt đối; kiểm timezone host bằng timedatectl. Lịch này có downtime writer, không bật chỉ bằng việc có file docs. Theo dõi exit/log và kiểm snapshot ngày mới; không có alert tự động trong project. RPO metadata phụ thuộc snapshot thành công gần nhất; RPO data còn phụ thuộc bản sao Delta riêng. Đo RTO qua restore drill, không suy ra từ dung lượng 300 GB hoặc một unit test archive.
+
+Registry v2 có function definitions và giữ nguyên key/prefix của v1. Trước rollback code cũ, dừng writer và xử lý registry như hướng dẫn [FUNCTIONS](FUNCTIONS.md); không ép version manifest về 1. Backup PostgreSQL vẫn là phương án đầy đủ hơn portable replay.

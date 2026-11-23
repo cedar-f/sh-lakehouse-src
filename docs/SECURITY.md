@@ -67,3 +67,9 @@ Hạn chế inbound ở provider, giữ đường quản trị hợp lệ; dừn
 ## Trước khi cho người khác dùng
 
 Xác nhận người dùng thuộc cùng trust boundary; kiểm tra HTTPS/login, private backend bindings, secret storage, backup độc lập và checklist [ACCEPTANCE.md](ACCEPTANCE.md). Ghi rõ UC auth disabled/NOSASL trong biên bản, không chỉ gửi một đường link UI có token.
+
+## Catalog functions và thao tác xóa bảng
+
+Function UI chỉ đăng ký/đọc/xóa definition, không eval/exec source. UC authorization vẫn disabled; người dùng workspace tin cậy quản lý cùng assets. Definition source/default values nằm trong private R2 registry, không chứa credential hardcode. Register không tự cấp runtime execution hoặc MCP quyền truy cập.
+
+Delete table yêu cầu exact full-name list và xác nhận DELETE, giới hạn 100, whitelist identifier và quote DDL. Nó dùng Spark DROP TABLE nên có thể ảnh hưởng data managed và model downstream; không có thùng rác/rollback batch. API xác thực không thay thế quyền bảng theo user. Không thử delete trên dữ liệu production để xác minh UI; dùng fixtures hoặc bảng sandbox có chủ đích.

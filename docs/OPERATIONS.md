@@ -131,3 +131,7 @@ Ghi commit/image IDs, giữ cấu hình private và snapshot phù hợp; worktre
 Rollback code và restore state là hai thao tác khác nhau. Hướng dẫn điều kiện/command, backup scope, diễn tập restore và giới hạn khi mất Delta nằm trong [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md). Snapshot hiện tại không nhân bản toàn warehouse; backup và cron chưa tự bật. Không dùng reset-metadata như bước upgrade.
 
 Các thao tác table cleanup/VACUUM cần chính sách Delta và reader retention riêng. DROP TABLE/location external có semantics khác managed; kiểm metadata và storage sau thao tác, không suy ra free disk/object chỉ từ việc table biến mất trong Catalog.
+
+## Nâng cấp Catalog functions / registry v2
+
+Upgrade bằng git pull và rebuild thông thường, không reset metadata. Đợi registry healthy, kiểm Compute counts/functions và Sync trước khi dựng lại host. Manifest v1 tự nâng v2 tại cùng key bằng conditional PUT; code cũ không đọc v2. Function definition được replay, không thực thi code khi startup. Nếu cần rollback, dừng writers/registry và dùng quy trình restore/registry disabled trong [DISASTER_RECOVERY](DISASTER_RECOVERY.md), không sửa version manifest bằng tay. Xem [FUNCTIONS](FUNCTIONS.md).

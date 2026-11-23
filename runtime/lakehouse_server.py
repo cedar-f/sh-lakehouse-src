@@ -15,6 +15,8 @@ from config import ROOT, RUNTIME, identifier, uc, all_catalogs, timezone_name
 from cluster_restarts import ClusterRestarts
 from file_deletion import delete_batch, delete_target
 import git_integration
+from catalog_functions import create_payload
+from catalog_actions import full_name
 
 def _jupyter_server_extension_points(): return [{'module':'lakehouse_server'}]
 
@@ -27,7 +29,7 @@ def storage():
 UPLOADS=RUNTIME/'uploads'
 
 async def runner_request(method,path,payload=None):
-    async with httpx.AsyncClient(timeout=7200 if path=='sql' else 60) as client:
+    async with httpx.AsyncClient(timeout=7200 if path in ('sql','tables/delete') else 60) as client:
         response=await client.request(method,os.getenv('RUNNER_URL','http://runner:8765')+'/'+path,
             headers={'X-Runner-Token':os.environ['RUNNER_TOKEN']},json=payload)
         if response.is_error:
@@ -61,11 +63,14 @@ class API(JupyterHandler):
     async def get(self,path):
         try:
             if path=='catalogs': result={'catalogs':await asyncio.to_thread(all_catalogs)}
-            elif path in ('schemas','tables','volumes'):
+            elif path in ('schemas','tables','volumes','functions'):
                 params={'catalog_name':identifier(self.get_argument('catalog'))}
                 if path!='schemas': params['schema_name']=identifier(self.get_argument('schema'))
                 if self.get_argument('page_token',''): params['page_token']=self.get_argument('page_token')
                 result=await asyncio.to_thread(uc,'GET',path,None,params)
+            elif path=='function':
+                name=full_name(self.get_argument('name'))
+                result=await asyncio.to_thread(uc,'GET','functions/'+quote(name,safe=''))
             elif path=='table':
                 name=self.get_argument('name'); [identifier(p) for p in name.split('.')]
                 if len(name.split('.'))!=3: raise ValueError('Expected catalog.schema.table')
@@ -139,6 +144,13 @@ class API(JupyterHandler):
                 return self.finish_json({'ETag':result['ETag'],'PartNumber':number})
             data=json.loads(self.request.body or '{}')
             if path=='catalog-registry/sync':result=await registry_request('POST')
+            elif path=='functions':
+                result=await asyncio.to_thread(uc,'POST','functions',create_payload(data))
+            elif path=='functions/delete':
+                name=full_name(data.get('name'))
+                if data.get('confirmation')!=name:raise ValueError('Confirm the full function name')
+                result=await asyncio.to_thread(uc,'DELETE','functions/'+quote(name,safe=''))
+            elif path=='tables/delete':result=await self.runner('POST',path,data)
             elif path.startswith('git/'):
                 result=await asyncio.to_thread(git_integration.action,path[4:],data,ROOT)
             elif path in ('catalogs','schemas'):

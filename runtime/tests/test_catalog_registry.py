@@ -32,25 +32,27 @@ class Store:
 
 
 def document():
-    return {'version':1,'bucket':'fixture','catalogs':[
+    return {'version':2,'bucket':'fixture','catalogs':[
         {'name':'empty','comment':'empty catalog','properties':{'department':'finance'},'storage_root':'s3://fixture/empty'},
         {'name':'sales','comment':'Sales','storage_root':'s3://fixture/warehouse/sales','storage_location':'s3://fixture/warehouse/sales/__unitystorage/catalogs/old'}],
         'schemas':[{'name':'empty_schema','catalog_name':'sales','comment':'No tables','properties':{'stage':'future'},'storage_root':'s3://fixture/separate'},
                    {'name':'raw','catalog_name':'sales'}],
         'volumes':[{'name':'landing','catalog_name':'sales','schema_name':'raw','comment':'CSV files','volume_type':'EXTERNAL','storage_location':'s3://fixture/incoming'}],
+        'functions':[],
         'tables':[{'name':'orders','catalog_name':'sales','schema_name':'raw','table_type':'EXTERNAL','data_source_format':'DELTA',
                    'storage_location':'s3://fixture/external/orders','columns':[{'name':'id','type_text':'int','type_name':'INT','type_json':'"integer"','position':0}]}]}
 
 
 class UC:
     def __init__(self, data=None):
-        self.data=copy.deepcopy(data) if data is not None else {'version':1,'bucket':'fixture',**{k:[] for k in ('catalogs','schemas','tables','volumes')}}
+        self.data=copy.deepcopy(data) if data is not None else {'version':2,'bucket':'fixture',**{k:[] for k in ('catalogs','schemas','tables','volumes','functions')}}
         self.posts=[];self.fail_on=None
 
     def scan(self, bucket):return copy.deepcopy(self.data)
 
     def request(self, method, kind, payload):
         assert method=='POST'
+        if kind=='functions':payload=payload['function_info']
         if name(payload)==self.fail_on:raise RuntimeError('interrupted restore')
         assert name(payload) not in {name(x) for x in self.data[kind]}
         self.posts.append((kind,copy.deepcopy(payload)))
@@ -175,7 +177,7 @@ def test_scan_includes_empty_namespaces_and_follows_all_pages(monkeypatch):
         if path=='catalogs/sales':return document()['catalogs'][1]
         if path=='schemas':return {'schemas':[]} if params['catalog_name']=='empty' else {'schemas':[{'name':'empty_schema'}]}
         if path=='schemas/sales.empty_schema':return document()['schemas'][0]
-        if path in ('tables','volumes'):return {path:[]}
+        if path in ('tables','volumes','functions'):return {path:[]}
         raise AssertionError(path)
     monkeypatch.setattr(uc,'request',request)
     result=uc.scan('fixture')
@@ -187,3 +189,55 @@ def test_scan_includes_empty_namespaces_and_follows_all_pages(monkeypatch):
 def test_registry_prefix_cannot_target_table_data(monkeypatch,prefix):
     monkeypatch.setenv('UC_REGISTRY_PREFIX',prefix)
     with pytest.raises(ValueError):registry_key()
+
+
+def function():
+    from catalog_functions import create_payload
+    return create_payload({'name':'increment','catalog_name':'sales','schema_name':'raw','language':'PYTHON',
+        'return_type':'INT','parameters':[{'name':'value','type':'INT'}],'body':'return value + 1',
+        'comment':'Increment an integer'})['function_info']
+
+
+def test_functions_replay_preserves_body_types_comments_and_dependencies(tmp_path):
+    source=document();f=function();f['properties']='{"team":"data"}'
+    f['routine_dependencies']={'dependencies':[{'table':{'table_full_name':'sales.raw.orders'}}]}
+    source['functions']=[f];store=Store(source);uc=UC()
+    r=engine(tmp_path,store,uc);r.initialize()
+    assert uc.data['functions']==[f] and not store.puts
+    assert r.status()['counts']['functions']==1
+    uc.data['functions'][0]['routine_definition']='return value + 2'
+    r.dirty();r.sync()
+    assert json.loads(store.body)['functions'][0]['routine_definition']=='return value + 2'
+    uc.data['functions']=[];r.dirty();r.sync()
+    restored=UC();engine(tmp_path/'new',store,restored).initialize()
+    assert not restored.data['functions']
+
+
+def test_v1_manifest_upgrades_conditionally_without_losing_existing_assets(tmp_path):
+    source=document();source['version']=1;source.pop('functions')
+    store=Store(source);uc=UC(document());r=engine(tmp_path,store,uc);r.initialize()
+    value=json.loads(store.body)
+    assert value['version']==2 and value['functions']==[]
+    assert value['tables']==source['tables'] and store.puts[-1]['IfMatch']=='"0"'
+
+
+def test_v1_upgrade_without_local_state_adopts_previously_untracked_functions(tmp_path):
+    source=document();source['version']=1;source.pop('functions')
+    live=document();live['functions']=[function()]
+    store=Store(source);r=engine(tmp_path,store,UC(live));r.initialize()
+    assert json.loads(store.body)['functions']==live['functions']
+
+
+def test_function_sync_failure_cannot_erase_last_published_definition(tmp_path):
+    source=document();source['functions']=[function()];store=Store(source);uc=UC(source)
+    r=engine(tmp_path,store,uc);r.initialize();previous=store.body
+    uc.data['functions'][0]['routine_definition']='return value + 5';r.dirty();store.fail=True
+    with pytest.raises(ClientError):r.sync()
+    assert store.body==previous and not r.ready and r.status()['pending']
+
+
+def test_corrupt_function_is_rejected_before_any_restore(tmp_path):
+    source=document();f=function();f['input_params']['parameters'][0]['position']=5;source['functions']=[f]
+    uc=UC();store=Store(source)
+    with pytest.raises(ValueError):engine(tmp_path,store,uc).initialize()
+    assert not uc.posts

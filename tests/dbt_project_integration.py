@@ -105,6 +105,18 @@ def inside():
         assert result.returncode and 'Declare +schema' in result.stdout, result.stdout[-5000:]
         cursor.execute('SHOW TABLES IN default')
         assert not cursor.fetchall()
+        # Exercise the exact multi-selection DROP implementation on real Spark,
+        # including a target schema different from the connection namespace.
+        from catalog_actions import drop_tables
+        targets=['spark_catalog.a.stg_orders','spark_catalog.b.fct_orders']
+        def execute(sql,**kwargs):
+            cursor.execute(sql)
+        result=drop_tables({'names':targets,'confirmed_names':targets,'confirmation':'DELETE'},
+                           lambda *args: {},execute)
+        assert result['deleted']==2
+        cursor.execute('SHOW TABLES IN b')
+        assert not cursor.fetchall()
+        print('PASS confirmed multi-table DROP on real Spark/Delta', flush=True)
         print('PASS source raw.orders -> a.stg_orders -> b.fct_orders, 2 tests, Docs across schemas, missing-schema rejection', flush=True)
         connection.close()
     finally:

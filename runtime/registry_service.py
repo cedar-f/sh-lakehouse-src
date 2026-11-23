@@ -82,7 +82,7 @@ def manual_sync(x_runner_token: str = Header(default='')):
 def is_metadata(method, path):
     return method in ('POST', 'PATCH', 'PUT', 'DELETE') and any(
         path == 'api/2.1/unity-catalog/' + kind or path.startswith('api/2.1/unity-catalog/' + kind + '/')
-        for kind in ('catalogs', 'schemas', 'tables', 'volumes'))
+        for kind in ('catalogs', 'schemas', 'tables', 'volumes','functions'))
 
 
 def forward(method, path, query, body, content_type, authorization):

@@ -18,7 +18,7 @@ Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, S
 
 - Spark local với JVM riêng cho SQL, từng kernel và notebook nền; chưa shared cluster/autoscaling.
 - dbt project có thể tự khai báo catalog và schema theo model/nhóm, chạy nhiều schema qua source/ref; xem [DBT_PROJECTS](docs/DBT_PROJECTS.md).
-- UC chạy trên PostgreSQL; registry JSON trên R2 tự phục hồi catalog/schema rỗng, comment/properties/root và external assets vào UC mới. Managed assets được giữ inventory và báo chưa phục hồi. Xem [CATALOG_REGISTRY](docs/CATALOG_REGISTRY.md).
+- UC chạy trên PostgreSQL; registry JSON trên R2 tự phục hồi catalog/schema rỗng, comment/properties/root, external assets và function definitions vào UC mới. Managed assets được giữ inventory và báo chưa phục hồi. Xem [CATALOG_REGISTRY](docs/CATALOG_REGISTRY.md).
 - UC authorization tắt, SQL NOSASL; miền người dùng tin cậy. Public access theo [SECURITY](docs/SECURITY.md).
 - Snapshot script không nhân bản toàn bộ Delta data; cần data backup độc lập.
 - Phần chưa nghiệm thu/triển khai được ghi tại [REQUIREMENTS](docs/REQUIREMENTS.md).

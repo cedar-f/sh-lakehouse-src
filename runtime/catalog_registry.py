@@ -13,6 +13,7 @@ import httpx
 
 from config import RUNTIME, identifier
 from platform_bootstrap import storage
+from catalog_functions import FUNCTION_FIELDS, definition as function_definition, validate_function
 
 MAX_BYTES = 16 * 1024 * 1024
 FIELDS = {
@@ -21,6 +22,7 @@ FIELDS = {
     'volumes': ('name', 'catalog_name', 'schema_name', 'comment', 'volume_type', 'storage_location'),
     'tables': ('name', 'catalog_name', 'schema_name', 'comment', 'properties', 'table_type',
                'data_source_format', 'columns', 'storage_location'),
+    'functions': FUNCTION_FIELDS,
 }
 
 
@@ -45,19 +47,21 @@ def name(record):
 
 
 def definitions(records, kind):
+    if kind=='functions':return sorted((function_definition(r) for r in records),key=name)
     return sorted(({k: r[k] for k in FIELDS[kind] if r.get(k) is not None} for r in records), key=name)
 
 
 def fingerprint(document):
     # Generated namespace paths change with new UC object IDs. They are informational.
     logical = {kind: [{k: v for k, v in r.items() if not (
-        kind in ('catalogs', 'schemas') and k == 'storage_location')} for r in document[kind]] for kind in FIELDS}
+        kind in ('catalogs', 'schemas') and k == 'storage_location')} for r in document.get(kind,[])] for kind in FIELDS}
     return hashlib.sha256(json.dumps(logical, sort_keys=True).encode()).hexdigest()
 
 
 def validate(document, bucket):
-    if document.get('version') != 1 or document.get('bucket') != bucket:
+    if document.get('version') not in (1,2) or document.get('bucket') != bucket:
         raise ValueError('Registry version or bucket mismatch; registry was not modified')
+    if document['version']==1:document.setdefault('functions',[])
     for kind in FIELDS:
         if not isinstance(document.get(kind), list):
             raise ValueError('Invalid registry collection: ' + kind)
@@ -67,11 +71,12 @@ def validate(document, bucket):
             for field in ('name', 'catalog_name', 'schema_name'):
                 if field in r: identifier(r[field])
             if not r.get('name') or (kind != 'catalogs' and not r.get('catalog_name')) or (
-                kind in ('tables', 'volumes') and not r.get('schema_name')):
+                kind in ('tables', 'volumes','functions') and not r.get('schema_name')):
                 raise ValueError('Missing namespace in registry')
             if name(r) in seen: raise ValueError('Duplicate registry record: ' + name(r))
             seen.add(name(r))
-            if r.get('properties') is not None and (not isinstance(r['properties'], dict) or
+            if kind=='functions':validate_function(r)
+            if kind!='functions' and r.get('properties') is not None and (not isinstance(r['properties'], dict) or
                 any(not isinstance(k, str) or not isinstance(v, str) for k, v in r['properties'].items())):
                 raise ValueError('Invalid registry properties')
             if 'comment' in r and not isinstance(r['comment'], str): raise ValueError('Invalid comment')
@@ -83,7 +88,7 @@ def validate(document, bucket):
     cats = {r['name'] for r in document['catalogs']}
     schemas = {name(r) for r in document['schemas']}
     if any(r['catalog_name'] not in cats for r in document['schemas']) or any(
-        r['catalog_name'] + '.' + r['schema_name'] not in schemas for k in ('tables', 'volumes') for r in document[k]):
+        r['catalog_name'] + '.' + r['schema_name'] not in schemas for k in ('tables', 'volumes','functions') for r in document[k]):
         raise ValueError('Registry contains missing parent namespaces')
 
 
@@ -109,13 +114,13 @@ class Upstream:
             seen.add(token); params['page_token'] = token
 
     def scan(self, bucket):
-        result = {'version': 1, 'bucket': bucket, **{k: [] for k in FIELDS}}
+        result = {'version': 2, 'bucket': bucket, **{k: [] for k in FIELDS}}
         for c in self.listing('catalogs'):
             result['catalogs'].append(self.request('GET', 'catalogs/' + quote(c['name'], safe='')))
             for s in self.listing('schemas', catalog_name=c['name']):
                 full = c['name'] + '.' + s['name']
                 result['schemas'].append(self.request('GET', 'schemas/' + quote(full, safe='')))
-                for kind in ('tables', 'volumes'):
+                for kind in ('tables', 'volumes','functions'):
                     for r in self.listing(kind, catalog_name=c['name'], schema_name=s['name']):
                         result[kind].append(self.request('GET', kind + '/' + quote(full + '.' + r['name'], safe='')))
         for kind in FIELDS: result[kind] = definitions(result[kind], kind)
@@ -181,7 +186,7 @@ class Registry:
                     if clean(actual) != clean(payload):
                         raise ValueError('Restore conflict at ' + kind + '/' + name(r))
                 else:
-                    self.uc.request('POST', kind, payload)
+                    self.uc.request('POST', kind, {'function_info':payload} if kind=='functions' else payload)
         self.state['restoring'] = False
         self.state['dirty'] = False
         self.save()
@@ -194,7 +199,10 @@ class Registry:
                      self.state.get('etag') == etag)
             if remote is not None and (not live['catalogs'] or owned and self.state.get('restoring')):
                 self.restore(remote, etag)
-            elif remote is not None and not owned and fingerprint(live) != fingerprint(remote):
+            # v1 never tracked functions. On an unanchored upgrade, adopt the
+            # existing UC functions only when every previously tracked asset agrees.
+            comparable = {**live,'functions':[]} if remote is not None and remote.get('version')==1 and not remote['functions'] else live
+            if remote is not None and not owned and live['catalogs'] and fingerprint(comparable) != fingerprint(remote):
                 raise ValueError('Existing UC conflicts with R2 registry. Refusing to overwrite either source; see CATALOG_REGISTRY.md')
             self.document, self.etag = remote, etag
             self.state.update(bucket=self.bucket, key=self.key, etag=etag)
@@ -217,7 +225,8 @@ class Registry:
                 self.state['unrestored'] = keep
                 for kind in FIELDS: live[kind] = definitions(live[kind], kind)
                 validate(live, self.bucket)
-                if self.document is None or fingerprint(live) != fingerprint(self.document):
+                live['version']=2
+                if self.document is None or self.document.get('version')!=2 or fingerprint(live) != fingerprint(self.document):
                     live['updated_at'] = time.time()
                     body = json.dumps(live, ensure_ascii=False, sort_keys=True).encode()
                     if len(body) > MAX_BYTES: raise ValueError('Registry exceeds 16 MiB')

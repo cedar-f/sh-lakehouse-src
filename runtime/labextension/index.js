@@ -6,6 +6,7 @@ import { createCompute } from './compute';
 import { createHistory } from './history';
 import { createWorkflow } from './workflow';
 import { createGitHub } from './github';
+import { createCatalog } from './catalog';
 import './style.css';
 
 const el=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
@@ -37,19 +38,7 @@ export default {
       try{await views[name](panel.node);}catch(e){panel.node.append(el('pre','lh-error',e.message));}
     }
     const views={
-      Catalog:async root=>{
-        root.append(el('h2','','Catalog'),el('div','lh-muted','Persistent catalog · schema · table · volumes on R2'));
-        const bar=el('div','lh-toolbar'),cat=el('select'),schema=el('select');bar.append(cat,schema);root.append(bar);
-        const body=el('div'),detail=el('div');root.append(body,detail);
-        async function cats(){cat.replaceChildren();(await api('catalogs')).catalogs.forEach(c=>{const o=el('option','',c.name);o.value=c.name;cat.append(o);});await schemas();}
-        async function schemas(){schema.replaceChildren();if(!cat.value)return;const r=await api('schemas?catalog='+encodeURIComponent(cat.value));(r.schemas||[]).forEach(s=>{const o=el('option','',s.name);schema.append(o);});await tables();}
-        async function tables(){body.replaceChildren();detail.replaceChildren();if(!schema.value)return;const q='?catalog='+encodeURIComponent(cat.value)+'&schema='+encodeURIComponent(schema.value);let token='';const list=el('div');body.append(list);
-          do{const r=await api('tables'+q+(token?'&page_token='+encodeURIComponent(token):''));for(const t of r.tables||[]){const row=el('div','lh-toolbar');row.append(button(t.name,()=>details(t.full_name)),el('span','lh-muted',t.table_type+' · '+t.data_source_format));list.append(row);}token=r.next_page_token||'';}while(token);
-          const v=await api('volumes'+q);body.append(el('h3','','Volumes / files'));for(const volume of v.volumes||[]){body.append(button(volume.name,()=>open('Files')),el('div','lh-muted',volume.storage_location));}}
-        async function details(name){const t=await api('table?name='+encodeURIComponent(name));detail.replaceChildren(el('h3','',name));const b=el('div','lh-toolbar');b.append(button('Preview',async()=>{const r=await api('sql',{sql:'SELECT * FROM '+name+' LIMIT 100'});const out=el('div');detail.append(out);table(out,r.columns,r.rows);}),button('Open SQL notebook',()=>notebook('SELECT * FROM '+name+' LIMIT 100;'),true));detail.append(b);table(detail,['Column','Type','Comment'],(t.columns||[]).map(c=>[c.name,c.type_text,c.comment||'']));detail.append(el('pre','',JSON.stringify({location:t.storage_location,type:t.table_type,properties:t.properties},null,2)));detail.append(el('h3','','Permissions'),el('div','lh-muted',t.authorization.note));}
-        cat.onchange=()=>schemas().catch(e=>body.textContent=e.message);schema.onchange=()=>tables().catch(e=>body.textContent=e.message);
-        bar.append(button('Refresh',cats),button('+ Catalog',async()=>{const n=await ask('Create catalog','sales');if(n){await api('catalogs',{name:n});await cats();cat.value=n;await schemas();}}),button('+ Schema',async()=>{const n=await ask('Create schema','raw');if(n){await api('schemas',{name:n,catalog_name:cat.value});await schemas();}}));await cats();
-      },
+      Catalog:root=>createCatalog(root,{api,el,field,button,table,notebook,open,ask}),
       Files:async root=>{
         root.append(el('h2','','Files on R2'),el('div','lh-muted','Upload and delete files or subfolders inside incoming/. Deletion is permanent. Table data under warehouse/ is read only.'));
         const bar=el('div','lh-toolbar'),prefix=el('input');prefix.value='incoming/';prefix.style.flex='1';prefix.setAttribute('aria-label','Upload folder');bar.append(el('span','lh-muted','Upload folder'),prefix,button('Refresh tree',()=>tree.refresh()),button('Collapse all',()=>tree.collapseAll()));root.append(bar);

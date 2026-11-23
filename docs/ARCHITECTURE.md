@@ -90,7 +90,7 @@ dbt subprocess dùng dbt-spark method thrift; runner sinh profiles.yml với thr
 
 ## Portable UC registry
 
-Toàn bộ client project dùng UC_URL registry proxy, backend catalog không publish host port. POST/PATCH/PUT/DELETE metadata catalogs/schemas/tables/volumes được serialize và sync trước response thành công. Reconcile scan có pagination bắt cả empty namespace và thay đổi ngoài proxy trong khoảng poll. R2 current.json có version/bucket/ETag CAS; runtime/registry/state.json giữ lineage, pending/restore marker và unsupported inventory.
+Toàn bộ client project dùng UC_URL registry proxy, backend catalog không publish host port. POST/PATCH/PUT/DELETE metadata catalogs/schemas/tables/volumes/functions được serialize và sync trước response thành công. Reconcile scan có pagination bắt cả empty namespace và thay đổi ngoài proxy trong khoảng poll. R2 current.json v2 giữ thêm function definition (v1 được conditional-upgrade), có version/bucket/ETag CAS; runtime/registry/state.json giữ lineage, pending/restore marker và unsupported inventory.
 
 Registry replay khi UC trống diễn ra trước bootstrap. UC nonempty khác registry không có lineage khớp bị chặn. Partial replay resume không ghi đè object có định nghĩa khác. Managed asset không bị biến thành external; bảng/volume chưa replay vẫn giữ inventory và có cảnh báo Compute. Chi tiết và giới hạn ở [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
 

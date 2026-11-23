@@ -33,11 +33,21 @@ set_output("count", 10)
 ## Catalog, schema và table
 
 1. Catalog → + Catalog hoặc + Schema, đặt tên hợp lệ.
-2. Chọn catalog/schema để liệt kê table và volume.
+2. Chọn catalog/schema để liệt kê tables, volumes và functions. Asset type và Search name lọc nội dung; Refresh giữ catalog/schema/type/search nếu namespace vẫn tồn tại. Nếu namespace đã bị xóa, chọn namespace còn hợp lệ. Selection được giữ cho bảng còn tồn tại trong cùng namespace; đổi catalog/schema sẽ xóa selection.
 3. Bấm table để xem columns, location, Preview hoặc Open SQL notebook.
 4. SQL cell tự refresh danh sách catalog. Với Python gọi `refresh_catalogs()` trước khi dùng catalog vừa tạo. Compute chọn default catalog/schema cho các Spark session.
 
-Panel Permissions hiển thị trạng thái authorization hiện tại; xem [FEATURES.md](FEATURES.md) trước khi coi đó là cơ chế cấp quyền theo user.
+Table detail hiển thị trạng thái authorization hiện tại; xem [FEATURES.md](FEATURES.md) trước khi coi đó là cơ chế cấp quyền theo user.
+
+### Copy tên và xóa nhiều bảng
+
+Copy full name ở từng hàng hoặc table detail sao chép catalog.schema.table; có fallback copy cho HTTP không có Clipboard API. Tick checkbox từng bảng hoặc Select all visible tables, bấm Delete selected tables. Tối đa 100 bảng mỗi batch. Kiểm danh sách tên đầy đủ và nhập DELETE để xác nhận; không xóa theo chuỗi search hoặc wildcard. Bảng được chọn nhưng bị ẩn bởi filter vẫn nằm trong danh sách xác nhận.
+
+Thao tác dùng Spark DROP TABLE, không PURGE và không xóa raw object R2 trực tiếp. External table bị bỏ metadata, file bên ngoài còn; managed table data có thể bị xóa theo engine. Batch không atomic: lỗi một bảng thì dừng phần còn lại, hiện DELETED/MISSING/FAILED/NOT_ATTEMPTED theo từng bảng. Không rollback các bảng đã xóa. Nếu lỗi pending/timeout, refresh và kiểm registry trước khi retry. Sau kết quả, selection chỉ giữ các bảng còn tồn tại chưa xóa.
+
+### Functions
+
+Bấm + Function để đăng ký Python/SQL definition, bấm tên để xem params/types/comment/code, Copy full name hoặc Delete function có xác nhận full name. UC/R2 chỉ lưu định nghĩa, UI chưa thực thi Spark UDF/MCP. Hướng dẫn và giới hạn nằm ở [FUNCTIONS](FUNCTIONS.md).
 
 ## Files trên R2
 

@@ -10,11 +10,12 @@ Registry giữ định nghĩa portable của UC độc lập với vòng đời 
 | Schema, kể cả rỗng | catalog cha, name, comment, properties, storage_root riêng nếu có | Tạo lại sau catalog; không suy ra từ danh sách bảng |
 | External volume | catalog/schema/name, comment, type và storage_location | Đăng ký lại cùng location, không ghi file dữ liệu |
 | External Delta table | Namespace/name, location, columns, properties, comment, format/type | Đăng ký metadata qua UC API, không copy hoặc overwrite Delta |
+| Function | Namespace, tham số/return types, body/language, comment và flags UC trả về | Tạo lại definition sau namespace; không thực thi code |
 | Managed table/volume và các loại table khác | Giữ inventory/định nghĩa để không mất dấu location | Không replay thành external hoặc cấp một managed location mới để giả phục hồi; báo unrestored |
 
 Object unrestored được hiện trong Compute. Registry vẫn giữ bản ghi nếu namespace cha còn, và chặn tạo table/volume cùng tên qua proxy để tránh thay thế inventory cũ. Sau khi khôi phục bằng phương án riêng và UC có object cùng tên, định nghĩa UC mới thay bản inventory. DROP namespace cha chủ động sẽ loại inventory con khỏi registry ở lần sync kế tiếp. Phục hồi managed nguyên trạng cần database UC tương thích; không tự sửa ID/coordinator hoặc Delta log để ép nhận lại.
 
-Owner, grants, ID/audit timestamps UC, functions/models/views đầy đủ, Spark config, env, credential, notebook, Git, workflow và run history không được phục hồi bởi registry này. Field cấu hình được giữ là properties/storage root của UC, không phải mọi cấu hình của server. Secret kết nối vẫn ở env/secret store.
+Owner, grants, ID/audit timestamps UC, models/views đầy đủ, Spark config, env, credential, notebook, Git, workflow và run history không được phục hồi bởi registry này. Field cấu hình được giữ là properties/storage root của UC, không phải mọi cấu hình của server. Secret kết nối vẫn ở env/secret store.
 
 ## Vị trí và cấu hình
 
@@ -27,9 +28,9 @@ UC_REGISTRY_SYNC_SECONDS=60
 REGISTRY_MEMORY=256m
 ```
 
-Các biến có default nên env cũ không bắt buộc thêm ngay. Prefix phải riêng, không nằm trong warehouse/incoming; không đặt lifecycle xóa registry nếu muốn dùng để dựng lại host. Chỉ dùng cùng bucket cấu hình; location trong registry phải là path s3/s3a thuộc bucket đó. Identifier phải theo quy tắc tên của UI project. JSON tối đa 16 MiB, có version/bucket và kiểm quan hệ cha/con.
+Các biến có default nên env cũ không bắt buộc thêm ngay. Prefix phải riêng, không nằm trong warehouse/incoming; không đặt lifecycle xóa registry nếu muốn dùng để dựng lại host. Chỉ dùng cùng bucket cấu hình; location trong registry phải là path s3/s3a thuộc bucket đó. Identifier phải theo quy tắc tên của UI project. JSON tối đa 16 MiB, có version/bucket và kiểm quan hệ cha/con. Manifest v2 bổ sung functions; code mới đọc v1 và conditional-upgrade lên v2 tại cùng key. Code cũ từ chối v2; xem [FUNCTIONS](FUNCTIONS.md) trước rollback.
 
-Registry là object private, dùng bộ R2 S3 credential hiện có; không có secret cố định hoặc temporary credential được xuất từ UC. Custom properties có thể chứa nội dung do người dùng đặt nên cần bảo vệ registry như metadata nhạy cảm. Không public bucket/prefix.
+Registry là object private, dùng bộ R2 S3 credential hiện có; không có secret cố định hoặc temporary credential được xuất từ UC. Function source/defaults có thể chứa literal nhạy cảm do tác giả nhập; không ghi credential trong function. Custom properties có thể chứa nội dung do người dùng đặt nên cần bảo vệ registry như metadata nhạy cảm. Không public bucket/prefix.
 
 ## Luồng khởi động
 
@@ -39,7 +40,7 @@ PostgreSQL healthy → UC backend healthy + runtime-init complete
 → registry healthy → bootstrap → notebook/SQL → runner → Kestra
 ```
 
-Nếu R2 chưa có registry, service xuất UC hiện tại thành registry mới bằng conditional create. Nếu UC trống và registry hợp lệ đã có, phục hồi catalog → schema → external volume → external Delta table trước bootstrap. Catalog/schema rỗng vẫn có bản ghi riêng. Restore ngắt giữa chừng có marker local để tiếp tục idempotent; object có tên trùng nhưng định nghĩa khác bị từ chối, không tự ghi đè.
+Nếu R2 chưa có registry, service xuất UC hiện tại thành registry mới bằng conditional create. Nếu UC trống và registry hợp lệ đã có, phục hồi catalog → schema → external volume → external Delta table → functions trước bootstrap. Catalog/schema rỗng vẫn có bản ghi riêng. Restore ngắt giữa chừng có marker local để tiếp tục idempotent; object có tên trùng nhưng định nghĩa khác bị từ chối, không tự ghi đè.
 
 Nếu UC đã có metadata khác registry và không có lineage local khớp, service không chọn bên nào thay người vận hành. Startup dừng với thông báo conflict. Chỉ một host được quản lý registry tại một thời điểm; đây không phải cơ chế workspace đa writer.
 
@@ -47,11 +48,11 @@ Registry không tự suy ra được tên/comment của UC đã bị xóa trư�
 
 ## Đồng bộ trong lúc chạy
 
-UC_URL của notebook/SQL/runner trỏ tới proxy `http://registry:8080`; Java UC backend vẫn ở `http://catalog:8080`. Proxy forward API và serialize metadata writes cho catalogs/schemas/tables/volumes. Với các API này, UC mutation được áp dụng rồi registry phải sync thành công trước khi client nhận response thành công.
+UC_URL của notebook/SQL/runner trỏ tới proxy `http://registry:8080`; Java UC backend vẫn ở `http://catalog:8080`. Proxy forward API và serialize metadata writes cho catalogs/schemas/tables/volumes/functions. Với các API này, UC mutation được áp dụng rồi registry phải sync thành công trước khi client nhận response thành công.
 
 Nếu UC đổi thành công nhưng R2 ghi lỗi, client nhận 503 với thông báo thay đổi có thể đã áp dụng. Không retry mù; kiểm UC/status trước. Local pending marker được giữ để reconcile lại. Khi pending, metadata writes tiếp theo bị chặn; đọc vẫn được forward.
 
-Reconcile định kỳ quét toàn bộ catalog/schema/table/volume với pagination, đọc cả namespace rỗng. Nó cũng bắt thay đổi bypass proxy/đường API khác, nhưng chỉ sau khoảng thời gian poll và lần scan thành công. Không hứa durable ngay khi nhận response từ một client gọi trực tiếp backend. Thay đổi chỉ tồn tại trong khoảng chưa sync có thể mất khi xóa host đột ngột. Dùng Sync trước reset và cho các client đi qua UC_URL của project.
+Reconcile định kỳ quét toàn bộ catalog/schema/table/volume/function với pagination, đọc cả namespace rỗng. Nó cũng bắt thay đổi bypass proxy/đường API khác, nhưng chỉ sau khoảng thời gian poll và lần scan thành công. Không hứa durable ngay khi nhận response từ một client gọi trực tiếp backend. Thay đổi chỉ tồn tại trong khoảng chưa sync có thể mất khi xóa host đột ngột. Dùng Sync trước reset và cho các client đi qua UC_URL của project.
 
 Mỗi lần sync kiểm registry ETag; chỉ PUT khi định nghĩa thay đổi. Conditional PUT IfMatch/IfNoneMatch ngăn writer cũ ghi đè object mới. Registry bị sửa/xóa ngoài service gây conflict, không tự coi đó là registry trống để ghi lại. Một manifest duy nhất tránh đọc lẫn các collection từ nhiều phiên xuất; đây không là transaction phân tán giữa UC và R2. Không có lịch sử rollback registry nhiều phiên trong tính năng này.
 
@@ -80,6 +81,10 @@ Bootstrap vẫn tạo DEFAULT_CATALOG/default schema/incoming/sample thiếu sau
 - Registry hỏng JSON/version/bucket/path: startup từ chối, không ghi đè registry. Kiểm nguồn và khôi phục định nghĩa đúng bằng quy trình quản trị riêng.
 
 Không đưa PostgreSQL data directory lên R2/rclone mount. Không copy file `.db` đang chạy. Các thao tác của registry là UC metadata REST và một JSON object trên R2.
+
+## Functions và xóa bảng
+
+Catalog UI quản lý function theo [FUNCTIONS](FUNCTIONS.md). Function definition được sync/replay, không là managed compute hoặc MCP hosting. Xóa function/table được đồng bộ để không phục hồi metadata đã xóa sau một lần sync thành công. Delete table trên UI đi qua Spark DROP TABLE; external data không tự xóa khỏi R2, managed data có thể bị xóa theo engine. Không dùng UC metadata DELETE để giả thực hiện DROP có quản lý dữ liệu.
 
 ## Kiểm thử
 

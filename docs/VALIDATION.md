@@ -17,7 +17,7 @@ Lệnh và side effects của các test ở [DEVELOPMENT](DEVELOPMENT.md). Chạ
 
 ## Kiểm tra registry UC
 
-Tạo catalog rỗng, schema rỗng có comment/properties/root riêng, external volume và external Delta table sandbox; sync và kiểm current.json. Dựng UC đích trống cùng registry, kiểm tên/comment/properties/root, volume/table location và query data đã biết. Kiểm pagination, restore bị ngắt, JSON/bucket/path lỗi, R2 403, stale ETag và UC conflict. Managed asset phải hiện unrestored, giữ inventory và không tự biến thành external. Không xóa UC thật để test khi chưa xác định dữ liệu thuộc diện thử.
+Tạo catalog rỗng, schema rỗng có comment/properties/root riêng, external volume và external Delta table và Python function có input/return types/comment/body sandbox; sync và kiểm current.json. Dựng UC đích trống cùng registry, kiểm tên/comment/properties/root, volume/table location, function definition và query data đã biết. Kiểm pagination, restore bị ngắt, JSON/bucket/path lỗi, R2 403, stale ETag và UC conflict. Managed asset phải hiện unrestored, giữ inventory và không tự biến thành external. Không xóa UC thật để test khi chưa xác định dữ liệu thuộc diện thử.
 
 ## Kiểm tra Git
 
