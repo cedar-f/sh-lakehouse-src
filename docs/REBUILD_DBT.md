@@ -78,7 +78,7 @@ Trong **Workflows**, chọn `dbt_sample_pipeline` → **Load** → **Save & publ
 2. `build`: dựng model và chạy 7 data tests.
 3. `docs`: sinh tài liệu dbt.
 
-Flow dùng catalog DEFAULT_CATALOG tại thời điểm tạo và schema riêng `dbt_sample`. Theo dõi **Workflow Run History**; có thể xem cùng flow trong Kestra namespace `lakehouse.v3` sau khi publish.
+Project sample mới lưu vars.lakehouse_catalog = DEFAULT_CATALOG tại thời điểm tạo và +schema = dbt_sample cho models/seeds; flow không cần catalog/schema override. Sample/flow cũ được giữ nguyên, chuyển theo [DBT_PROJECTS](DBT_PROJECTS.md) nếu cần. Theo dõi **Workflow Run History**; có thể xem cùng flow trong Kestra namespace `lakehouse.v3` sau khi publish.
 
 ## Xem dbt report
 
@@ -86,7 +86,7 @@ Có hai nơi xem khác nhau:
 
 **Kết quả thực thi và test:** mở **Runs**, filter Type = dbt, tìm lần chạy `dbt_sample · build`, chọn **View**. Xem Models/test status, Logs, Code và Artifacts. `run_results.json` chứa kết quả từng model/test của lần chạy đó; `manifest.json` mô tả project tại thời điểm chạy. Workflow Run History cho biết bước seed/build/docs nào thành công hoặc thất bại.
 
-**Tài liệu, columns và lineage:** mở tab **dbt**, đặt Project directory = `dbt_sample`, Target catalog = catalog đã dùng trong flow, Target schema = `dbt_sample`. Sau khi bước docs thành công, bấm **Open Docs**. Trang mở ở tab trình duyệt mới qua chính cổng Jupyter đang dùng, không cần mở thêm port dbt. Cho phép popup nếu trình duyệt chặn. Docs là snapshot của lần generate gần nhất; sau khi sửa model, chạy lại docs để cập nhật.
+**Tài liệu, columns và lineage:** mở tab **dbt**, đặt Project directory = `dbt_sample`. Sample mới lấy catalog/schema từ dbt_project.yml, để Legacy project overrides trống. Sample cũ chưa migrate vẫn cần cùng legacy catalog/schema đã dùng trong flow. Sau khi bước docs thành công, bấm **Open Docs**. Trang mở ở tab trình duyệt mới qua chính cổng Jupyter đang dùng, không cần mở thêm port dbt. Cho phép popup nếu trình duyệt chặn. Docs là snapshot của lần generate gần nhất; sau khi sửa model, chạy lại docs để cập nhật.
 
 Kiểm tra dữ liệu qua SQL, thay `lakehouse` nếu dùng catalog khác:
 

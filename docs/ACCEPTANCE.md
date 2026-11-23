@@ -68,7 +68,7 @@ Chỉ dùng object thử do phiên nghiệm thu tạo. Xóa là vĩnh viễn; kh
 2. Tạo workflow thử SQL hai bước dependency. Publish, Execute, xem task mapping trên Kestra và Workflow Run History.
 3. Dựng Variables/If/For each theo [RUNS_WORKFLOWS.md](RUNS_WORKFLOWS.md); thử Then/Else, list rỗng, input override, failure handler và một retry có kiểm soát. Xem iteration/output và trạng thái task, không chỉ trạng thái tổng.
 4. Load `dbt_sample_pipeline` → Save & publish → Execute. Không cần bật schedule. Xác nhận seed/build/docs đều SUCCESS và **7 data tests thực sự chạy** trong build; parse chỉ chứng minh project hợp lệ.
-5. Trong Runs chọn dbt_sample build: xem model/test status, compiled SQL/code/log và tải run_results.json. Trong dbt panel đặt dbt_sample + đúng catalog/schema, Open Docs tải được model descriptions và lineage. Chạy lại docs sau thay model và xác nhận snapshot mới.
+5. Trong Runs chọn dbt_sample build: xem model/test status, compiled SQL/code/log và tải run_results.json. Trong dbt panel đặt dbt_sample, xác nhận catalog/schema khai báo trong project mode (hoặc legacy overrides nếu sample cũ), Open Docs tải được model descriptions và lineage. Chạy lại docs sau thay model và xác nhận snapshot mới. Theo [DBT_PROJECTS](DBT_PROJECTS.md), kiểm chuỗi source → schema a → schema b, thiếu +schema phải lỗi, catalog project khác Compute và không tự tạo default trong catalog project.
 
 ```sql
 SELECT customer_id, order_count, total_amount

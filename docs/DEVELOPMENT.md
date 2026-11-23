@@ -25,7 +25,7 @@
 | cluster_restarts.py | Save/restart coordinator cho SQL và các kernel được chọn, status polling |
 | runner.py | FastAPI jobs/SQL/config/flows, subprocess và kết nối Kestra |
 | execute_notebook.py, runtime_outputs.py | NBClient, cell capture, parameters và set_output |
-| dbt_project.py | Bỏ qua Jupyter checkpoints khi dbt discovery |
+| dbt_project.py / dbt_job.py | Resolve project catalog/schema, managed macro không ghi đè, parse/manifest guard và scoped PyHive session; bỏ qua checkpoints |
 | workflows.py / workflow_runtime.py / workflow_history.py | Compile DAG, expression/logic engine và execution history |
 | run_support.py / run_store.py | Code snapshots, process capture/limits, SQLite index, logs/cells/models/artifacts |
 | retention.py / migrate_runtime.py / backup_storage.py | Retention, migration có hash và snapshot archive |
@@ -77,6 +77,8 @@ Trong virtualenv riêng, cài `tests/requirements-ui.txt`, cài Chromium bằng 
 | `python tests/ui_compute_restart.py` | Restart/configure Spark và thao tác notebook; dùng môi trường riêng, đọc fixture/cleanup trong script |
 | `python tests/ui_git_setup.py` | Tạo/xóa container Docker riêng với repo bare local; kiểm GitHub wizard, key encrypted, native Git và restart. Không đọc .env hoặc gọi GitHub/R2. LAKEHOUSE_GIT_TEST_IMAGE chọn runtime image |
 | `python tests/registry_integration.py` | Docker UC/PostgreSQL riêng, xóa DB fixture và replay qua file-backed fake R2; không chạm env/volume/R2 production. Chọn image bằng LAKEHOUSE_REGISTRY_TEST_IMAGE/LAKEHOUSE_CATALOG_TEST_IMAGE |
+| `python tests/ui_dbt_project.py` | Jupyter container riêng với API fixtures; kiểm project UI/Open Docs/legacy workflow, không đọc env/R2. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |
+| `python tests/dbt_project_integration.py` | Container Spark Thrift/Delta/dbt riêng với catalog local, kiểm source → schema a → schema b, tests và Docs; tải Maven jars, không dùng UC/R2/env production. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |
 | `python tests/ui_registry.py` | Container Jupyter riêng và API fixtures; kiểm counts/unrestored/pending/manual sync/disabled và TZ của Compute, không đọc env/R2 |
 | `bash scripts/check.sh` | Smoke test có ghi Delta table thật; cần kế hoạch dọn table thử |
 | `bash scripts/check-notebook.sh notebooks/my_job.ipynb` | Thực thi notebook thật và mọi side effect trong notebook |

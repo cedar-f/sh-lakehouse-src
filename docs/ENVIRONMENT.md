@@ -68,7 +68,7 @@ Không đổi POSTGRES_PASSWORD của `.env` như cách reset database đã tồ
 | KESTRA_MEMORY | 4g | Giới hạn container Kestra |
 | KESTRA_JAVA_OPTS | Xms256m, Xmx2g, ActiveProcessorCount=2 | Heap/thread CPU cho JVM Kestra; xem giá trị đầy đủ trong .env.example |
 
-Tên catalog/schema dùng chữ, số, dấu gạch dưới và bắt đầu bằng chữ/gạch dưới. Có thể tạo thêm catalog/schema qua UI.
+Tên catalog/schema dùng chữ, số, dấu gạch dưới và bắt đầu bằng chữ/gạch dưới. Có thể tạo thêm catalog/schema qua UI. DEFAULT_CATALOG/DEFAULT_SCHEMA phục vụ bootstrap/notebook/SQL và dbt legacy. dbt project có vars.lakehouse_catalog dùng catalog riêng và +schema khai báo trong project, không lấy schema đầu ra từ Compute/env. Đây là cấu hình YAML của workspace, không thêm biến .env. Xem [DBT_PROJECTS](DBT_PROJECTS.md).
 
 Giới hạn container cần cao hơn heap để còn bộ nhớ Python, native và JVM overhead. Mỗi notebook kernel có Spark driver riêng; đừng nhân số notebook bận mà chỉ dự trù RAM cho một driver. `auto` sử dụng CPU Docker nhìn thấy, vẫn chịu giới hạn CPU/WSL/VM của host. Trên Windows, ngân sách WSL/Docker nằm ngoài `.env` của project.
 

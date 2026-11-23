@@ -75,8 +75,11 @@ version: '1.0.0'
 config-version: 2
 profile: lakehouse
 model-paths: [models]
+vars:
+  lakehouse_catalog: lakehouse
 models:
   my_lakehouse:
+    +schema: analytics
     +materialized: table
     +file_format: delta
 ```
@@ -86,7 +89,7 @@ Tạo model `dbt/models/run_date.sql` theo ví dụ dưới. Không cần lưu m
 Trong tab **dbt**:
 
 1. Project directory là đường dẫn tương đối từ workspace, mặc định `dbt`.
-2. Target catalog/schema để trống dùng mặc định; có thể chọn đích khác đã tồn tại. Runner sinh profile kết nối SQL Thrift.
+2. Catalog khai báo ở vars.lakehouse_catalog, schema ở +schema trong dbt_project.yml; tạo catalog trước qua Catalog UI. Không nhập legacy override. Runner sinh profile kết nối SQL Thrift và macro exact schema nếu chưa có. Model thiếu schema báo lỗi. Project cũ không có vars.lakehouse_catalog vẫn dùng Legacy project overrides/Compute. Xem [DBT_PROJECTS](DBT_PROJECTS.md) cho ví dụ source → schema a → schema b và cách migrate.
 3. Chạy deps khi có dependency, debug để kiểm tra kết nối, seed/build/test/snapshot theo nhu cầu. Selection dùng cú pháp dbt của bạn.
 4. Mở Runs để xem Models, Code, Logs và artifact của lần chạy.
 5. Bấm docs để tạo lại tài liệu; Open Docs mở bản thành công gần nhất hoặc tạo khi chưa có. Docs là snapshot, không tự cập nhật theo mỗi lần sửa model.

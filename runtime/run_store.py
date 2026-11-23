@@ -284,7 +284,7 @@ def log_page(run_id, cursor='', limit=100, level='', search='', source=''):
 def artifact_path(run_id, relative):
     directory=run_directory(run_id).resolve()
     path=(directory/relative).resolve()
-    if not path.is_relative_to(directory) or not path.is_file() or SECRET_KEY.search(path.name) or path.name=='profiles.yml':
+    if not path.is_relative_to(directory) or not path.is_file() or SECRET_KEY.search(path.name) or path.name in ('profiles.yml','dbt-job.json'):
         raise ValueError('Artifact is unavailable')
     return path
 
@@ -293,7 +293,7 @@ def artifacts(run_id):
     directory=run_directory(run_id)
     result=[]
     for path in directory.rglob('*'):
-        if not path.is_file() or path.is_symlink() or path.name=='profiles.yml' or SECRET_KEY.search(path.name):continue
+        if not path.is_file() or path.is_symlink() or path.name in ('profiles.yml','dbt-job.json') or SECRET_KEY.search(path.name):continue
         if path.name.endswith('.tmp') or '.git' in path.parts:continue
         result.append({'path':path.relative_to(directory).as_posix(),'size':path.stat().st_size})
         if len(result)>=2000:break

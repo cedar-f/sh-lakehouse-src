@@ -88,7 +88,11 @@ def test_bootstrap_twice_and_user_sample_changes_are_preserved(tmp_path, monkeyp
     flow = json.loads(definition.read_text())
     assert [n['command'] for n in flow['nodes']] == ['seed', 'build', 'docs']
     assert flow['scheduleEnabled'] is False and flow['cron'] == ''
-    assert all(n['catalog'] == 'starter' and n['schema'] == 'dbt_sample' for n in flow['nodes'])
+    assert all('catalog' not in n and 'schema' not in n for n in flow['nodes'])
+    import yaml
+    project = yaml.safe_load((tmp_path/'dbt_sample/dbt_project.yml').read_text())
+    assert project['vars']['lakehouse_catalog'] == 'starter'
+    assert project['models']['lakehouse_sample']['+schema'] == 'dbt_sample'
     flow['description'] = 'user customization'
     definition.write_text(json.dumps(flow))
     before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}

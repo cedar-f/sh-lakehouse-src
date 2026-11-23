@@ -78,7 +78,7 @@ sequenceDiagram
   R-->>C: JSON / run metadata
 ```
 
-dbt subprocess dùng dbt-spark method thrift; runner sinh profiles.yml với threads=1 và session parameters đăng ký UC catalogs. Tác vụ SQL thực thi trong SQL service. Artifact dbt target/log nằm theo từng run, không nằm cạnh model trong workspace. `dbt docs generate` tạo snapshot; Open Docs phục vụ asset qua Jupyter auth cùng port.
+dbt subprocess dùng dbt-spark method thrift; runner sinh profiles.yml với threads=1 và session parameters đăng ký UC catalogs. Project mode lấy catalog và các schema từ dbt_project.yml, chọn một schema đã khai báo để kết nối, không tạo default trong catalog project. dbt_job.py điều chỉnh PyHive connect trong child process và parse/kiểm manifest trước model SQL; schema phải đúng nguyên tên và không có per-model database/catalog. Legacy project giữ cơ chế cũ. Xem [DBT_PROJECTS](DBT_PROJECTS.md). Tác vụ SQL thực thi trong SQL service. Artifact dbt target/log nằm theo từng run, không nằm cạnh model trong workspace. `dbt docs generate` tạo snapshot; Open Docs phục vụ asset qua Jupyter auth cùng port.
 
 Để đảm bảo format khi tạo bảng, dùng `USING DELTA`. Nếu bỏ USING, cần đặt `spark.sql.sources.default=delta` trong Compute Extra Spark config. `spark.sql.defaultCatalog` quyết định namespace mặc định; không dùng temporary view thay metadata UC. Vị trí object thực tế lấy từ metadata table, không suy ra rằng mỗi catalog/schema luôn tương ứng một folder có tên giống vậy.
 

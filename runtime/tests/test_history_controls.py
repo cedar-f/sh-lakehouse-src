@@ -39,7 +39,9 @@ def test_log_redaction_and_artifact_traversal(monkeypatch):
     run_id='b'*32;directory=store.RUNS/run_id;directory.mkdir();store.write_run(directory,{'id':run_id,'status':'SUCCESS'})
     store.append_event(directory,'error secret-unit-value','ERROR');(directory/'profiles.yml').write_text('password: private')
     assert store.log_page(run_id)['items'][0]['message']=='error [REDACTED]'
-    for path in ('../history.sqlite','profiles.yml'):
+    (directory/'dbt-job.json').write_text('{"parameters":{"password":"private"}}')
+    assert not any(a['path']=='dbt-job.json' for a in store.artifacts(run_id))
+    for path in ('../history.sqlite','profiles.yml','dbt-job.json'):
         with pytest.raises(ValueError):store.artifact_path(run_id,path)
 
 def task(id,kind='sql',**kw):return dict(id=id,kind=kind,sql='SELECT 1',**kw)

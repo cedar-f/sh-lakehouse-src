@@ -6,6 +6,6 @@ Load `dbt_sample_pipeline` in Workflows. Save & publish, then Execute. The flow 
 
 Expected `customer_totals`: customer 101 has 2 orders / 150; customer 102 has 2 orders / 200; customer 103 has 1 order / 25.
 
-Use Runs → dbt build → View for test results/logs/artifacts. In the dbt panel set Project directory to `dbt_sample`, use the same catalog and schema, then Open Docs for model descriptions, columns and lineage. Docs describe the project; execution/test status is in Runs.
+Use Runs → dbt build → View for test results/logs/artifacts. In the dbt panel set Project directory to `dbt_sample`, leave Legacy project overrides empty (catalog/schema are declared in dbt_project.yml), then Open Docs for model descriptions, columns and lineage. Docs describe the project; execution/test status is in Runs.
 
 The runner supplies the connection profile; no credentials belong in this project.

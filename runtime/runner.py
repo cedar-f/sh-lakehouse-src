@@ -18,7 +18,7 @@ from config import ROOT, RUNTIME, RUNS, SETTINGS, safe_path, settings, identifie
 import run_store
 from run_support import snapshot_source,capture_process
 from workflows import compile_flow
-from dbt_project import prepare_dbt_project
+from dbt_project import prepare_dbt_project, project_destination, ensure_schema_macro
 from sql_supervisor import CONTROL as SQL_CONTROL, read_json, write_json
 
 app=FastAPI()
@@ -110,27 +110,24 @@ def execute(payload,run_id):
                 env['LAKEHOUSE_NOTEBOOK_CWD']=str(cwd)
             elif kind=='dbt':
                 cwd=safe_path(payload.get('path','dbt'))
-                if not (cwd/'dbt_project.yml').is_file(): raise ValueError('dbt_project.yml not found')
+                destination=project_destination(cwd,payload,settings())
                 command=payload.get('command','build')
                 if command not in ('build','run','test','seed','snapshot','docs','deps','debug'): raise ValueError('Invalid dbt command')
                 prepare_dbt_project(cwd)
+                if destination['mode']=='project': ensure_schema_macro(cwd)
                 snapshot_source(payload,directory,cwd)
+                cat=destination['catalog']
+                data.update(catalog=cat,dbt_destination=destination)
+                record(directory,data)
                 if command!='deps':
                     data['stage']='Waiting for Spark SQL'; record(directory,data)
                     wait_for_sql_ready(min(120,timeout))
-                cat=identifier(payload.get('catalog') or settings()['default_catalog'])
-                # dbt-spark uses the `default` namespace for Thrift metadata queries,
-                # even when models target another schema.
-                from urllib.error import HTTPError
-                try: uc('GET','schemas/'+cat+'.default')
-                except HTTPError as exc:
-                    if exc.code!=404: raise
-                    uc('POST','schemas',{'name':'default','catalog_name':cat})
+                    ensure_dbt_namespace(destination)
                 parameters={k:v for k,v in spark_conf().items() if k.startswith('spark.sql.catalog.')}
                 parameters['spark.sql.defaultCatalog']=cat
                 profile={'lakehouse':{'target':'dev','outputs':{'dev':{'type':'spark','method':'thrift',
                     'host':os.getenv('SQL_HOST','sql'),'port':10000,'auth':'NOSASL','user':'lakehouse',
-                    'schema':identifier(payload.get('schema') or settings()['default_schema']),'threads':1,
+                    'schema':destination['session_schema'],'threads':1,
                     'server_side_parameters':{'set:hivevar:'+key:value for key,value in parameters.items()}}}}}
                 (directory/'profiles.yml').write_text(yaml.safe_dump(profile))
                 env['DBT_TARGET_PATH']=str(directory/'target')
@@ -139,6 +136,11 @@ def execute(payload,run_id):
                 if command=='docs': cmd.insert(2,'generate')
                 if payload.get('select') and command in ('build','run','test','snapshot'): cmd+=['--select',payload['select']]
                 if payload.get('parameters'): cmd+=['--vars',json.dumps(payload['parameters'])]
+                if destination['mode']=='project':
+                    spec={'command':command,'destination':destination,'run_dir':str(directory),
+                          'project_dir':str(cwd),'parameters':payload.get('parameters',{}),'select':payload.get('select','')}
+                    (directory/'dbt-job.json').write_text(json.dumps(spec))
+                    cmd=[sys.executable,str(Path(__file__).with_name('dbt_job.py')),str(directory/'dbt-job.json')]
             elif kind=='sql':
                 snapshot_source(payload,directory)
                 data['stage']='Waiting for Spark SQL'; record(directory,data)
@@ -159,6 +161,28 @@ def execute(payload,run_id):
         data.update(stage='Completed' if data['status']=='SUCCESS' else 'Execution stopped',ended=time.time(),duration=round(time.time()-started,2),output=f'runs/{run_id}',outputs=run_store.redact(read_json(directory/'outputs.json')))
         record(directory,data)
     return data
+
+
+def ensure_dbt_namespace(destination):
+    from urllib.error import HTTPError
+    cat=destination['catalog']
+    if destination['mode']=='project':
+        try: uc('GET','catalogs/'+cat)
+        except HTTPError as error:
+            if error.code!=404: raise
+            raise ValueError(f'Catalog {cat} does not exist. Create it in Catalog before running this dbt project.') from error
+        # The patched dbt child connects to a declared schema, never USE default.
+        schemas=[destination['session_schema']]
+    else:
+        # Preserve the historical adapter/session behavior for unmigrated projects.
+        schemas=['default']
+    for schema in schemas:
+        try: uc('GET','schemas/'+cat+'.'+schema)
+        except HTTPError as error:
+            if error.code!=404: raise
+            try: uc('POST','schemas',{'name':schema,'catalog_name':cat})
+            except HTTPError as conflict:
+                if conflict.code!=409: raise
 
 @app.get('/health')
 def health(): return {'status':'ok'}
@@ -224,9 +248,12 @@ def run_cells(run_id:str,page:int=1,page_size:int=25):return run_store.notebook_
 
 @app.get('/docs/latest',dependencies=[Depends(auth)])
 def docs_latest(project:str='dbt'):
+    try: destination=project_destination(safe_path(project),{},settings())
+    except ValueError as error: raise HTTPException(400,str(error))
     with run_store.connect() as connection:
         rows=[json.loads(r['meta']) for r in connection.execute("SELECT meta FROM history WHERE category='run' AND kind='dbt' AND status='SUCCESS' AND json_extract(meta,'$.path')=? ORDER BY started DESC",(project,))]
     for row in rows:
+        if destination['mode']=='project' and (row.get('dbt_destination',{}).get('mode')!='project' or row.get('catalog')!=destination['catalog']):continue
         if row.get('path')==project and (RUNS/row['id']/'target/index.html').exists():return {'run_id':row['id']}
     return {'run_id':None}
 

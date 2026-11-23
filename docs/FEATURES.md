@@ -35,7 +35,7 @@ flowchart LR
 - **Compute:** status, CPU threads, memory, shuffle, default catalog/schema, Spark config và Save & Restart Spark; Catalog registry on R2 hiển thị sync/pending/counts/unrestored và có nút Sync registry now.
 - **Notebook/SQL:** Spark và %%sql được nạp khi kernel khởi động; kết quả truy vấn hiển thị dạng bảng. SQL editor và preview giới hạn 1000 dòng.
 - **GitHub:** onboarding repo mới/clone repo có code, auto .gitignore, SSH key/Unlock/shared agent, preview và commit/push đầu; Git panel native cho công việc hằng ngày. Xem [GITHUB_WORKSPACE](GITHUB_WORKSPACE.md).
-- **dbt:** debug/deps/seed/build/test/snapshot/docs; chọn project, selection, catalog/schema. Open Docs mở bộ tài liệu được sinh từ run.
+- **dbt:** debug/deps/seed/build/test/snapshot/docs; chọn project và selection. Project mode lấy catalog từ vars.lakehouse_catalog và exact schema theo model/nhóm trong YAML; thiếu schema báo lỗi. Legacy override giữ cho project cũ. Xem [DBT_PROJECTS](DBT_PROJECTS.md). Open Docs mở bộ tài liệu được sinh từ run.
 - **Runs:** tìm name/ID, type/status/from–to, paging/page size. Detail có Code, Logs, Models/Cells, Parameters, Outputs, Artifacts.
 - **Workflow:** bố trí node bằng kéo thả, dependency, Variables, If/Else, For each, Success/Failure/Always, input/output, retry và cron/timezone. Workflow Run History xem từng iteration và log run con.
 - **Vận hành:** TZ thống nhất, retention artifact/history, preview cleanup; run gián đoạn được đánh dấu INTERRUPTED sau khi runner khởi động lại.

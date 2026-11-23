@@ -56,7 +56,7 @@ def sample_flow(catalog, timezone):
     nodes = []
     for index, command in enumerate(('seed', 'build', 'docs')):
         nodes.append({'id': command, 'kind': 'dbt', 'path': 'dbt_sample',
-            'command': command, 'catalog': catalog, 'schema': 'dbt_sample',
+            'command': command,
             'dependsOn': [] if index == 0 else [nodes[-1]['id']],
             'parameters': {}, 'timeout': 7200, 'attempts': 1,
             'x': 30 + 240 * index, 'y': 50})
@@ -76,6 +76,10 @@ def seed_sample(root, catalog, timezone):
         temporary = Path(tempfile.mkdtemp(prefix='.dbt-sample-', dir=root))
         try:
             shutil.copytree(Path(__file__).parent / 'templates/dbt_sample', temporary, dirs_exist_ok=True)
+            config = temporary / 'dbt_project.yml'
+            data = yaml.safe_load(config.read_text())
+            data['vars']['lakehouse_catalog'] = catalog
+            config.write_text(yaml.safe_dump(data, sort_keys=False), encoding='utf-8')
             try:
                 temporary.rename(project)
                 created = True

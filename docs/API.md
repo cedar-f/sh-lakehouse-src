@@ -91,7 +91,7 @@ GET /lakehouse/docs/{run_id}/manifest.json
 GET /lakehouse/docs/{run_id}/catalog.json
 ```
 
-Cùng Jupyter auth. Artifact path bị chặn traversal/secret-named file/profiles.yml; không public thư mục runs bằng web server riêng. UI log giữ 1000 event gần nhất trong browser; dùng paging/artifact cho phần đầy đủ còn được giữ.
+Cùng Jupyter auth. Artifact path bị chặn traversal/secret-named file/profiles.yml/dbt-job.json; không public thư mục runs bằng web server riêng. UI log giữ 1000 event gần nhất trong browser; dùng paging/artifact cho phần đầy đủ còn được giữ.
 
 ## Gateway: portable UC registry
 
@@ -128,8 +128,12 @@ Notebook job (file phải có trong workspace):
 dbt job:
 
 ```json
-{"kind":"dbt","path":"dbt_sample","command":"build","catalog":"lakehouse","schema":"dbt_sample","select":"customer_totals","parameters":{},"timeout":7200}
+{"kind":"dbt","path":"dbt_sample","command":"build","select":"customer_totals","parameters":{},"timeout":7200}
 ```
+
+Với vars.lakehouse_catalog trong dbt_project.yml, runner dùng project mode: catalog literal, exact schema bắt buộc cho model/seed/snapshot, parse/manifest guard trước SQL, profile: lakehouse. Payload schema override hoặc catalog khác project bị từ chối trong run, status FAILED. Không truyền lakehouse_catalog qua parameters. Nếu không bật project mode, payload catalog/schema legacy vẫn được giữ; mặc định Compute khi trống. Run metadata có dbt_destination {mode,catalog,session_schema,schemas,project_name} trong project mode. GET docs/latest chỉ lấy Docs project-mode cùng catalog khi project đang bật chế độ này. Xem [DBT_PROJECTS](DBT_PROJECTS.md).
+
+profiles.yml và dbt-job.json là file nội bộ, không được liệt kê/tải qua Artifacts.
 
 Commands dbt: build/run/test/seed/snapshot/docs/deps/debug; UI gọi docs, runner chuyển thành `dbt docs generate`. parameters được truyền thành dbt vars. Không có endpoint chạy shell command tùy ý.
 

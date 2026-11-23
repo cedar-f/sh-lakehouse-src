@@ -39,6 +39,10 @@ Biểu thức chỉ hỗ trợ JSON fields/index, so sánh, toán học số, bo
 
 DAG đơn giản vẫn là từng task HTTP trong Kestra. Flow có logic/input/biến/tham chiếu động dùng một task điều phối trong Kestra, runner thực thi các bước và lưu trace. **Kestra giữ lịch và trạng thái tổng; Workflow Run History giữ chi tiết các bước logic.** Các bước trong loop không phải những node native riêng trong Kestra. Retry/timeout của task I/O cấu hình trong editor; flow có nhánh được runner áp dụng. Dừng execution từ Kestra chưa bảo đảm dừng ngay request đang thực thi trong runner; timeout vẫn giới hạn thời gian chạy.
 
+## dbt task và namespace project
+
+Task dbt chọn Workspace path, command và selection; Parameters là dbt vars nghiệp vụ. Với project mode, khai báo vars.lakehouse_catalog và +schema trong dbt_project.yml, không nhập schema/catalog ở task. Một build chạy được source → model schema a → model schema b qua ref(), không cần loop. Legacy project overrides chỉ dành cho project cũ. Khi migrate, xóa schema override của từng task rồi Save & publish; xem [DBT_PROJECTS](DBT_PROJECTS.md).
+
 ## Ví dụ thực hành: Variable dùng trong cả If và For each
 
 Tạo workflow mới có ID `variable_if_foreach_demo` theo các trường bên dưới, rồi Save & publish. Ví dụ chỉ dùng SQL SELECT tính toán; không phụ thuộc notebook hay dữ liệu mẫu có sẵn.

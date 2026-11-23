@@ -4,11 +4,15 @@ config-version: 2
 profile: lakehouse
 model-paths: [models]
 seed-paths: [seeds]
+vars:
+  lakehouse_catalog: lakehouse
 models:
   lakehouse_sample:
+    +schema: dbt_sample
     +materialized: table
     +file_format: delta
 seeds:
   lakehouse_sample:
+    +schema: dbt_sample
     +file_format: delta
     +quote_columns: false

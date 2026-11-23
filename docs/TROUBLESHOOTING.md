@@ -54,6 +54,8 @@ Mở GitHub → Refresh status, kiểm key loaded; dùng Unlock SSH key với pa
 
 ## dbt checkpoint và model
 
+Project mode: kiểm vars.lakehouse_catalog là literal, catalog tồn tại và +schema cho model/seed/snapshot. Xóa legacy overrides sau migrate; macro cũ ghép target.schema cần sửa, runner không ghi đè. Xem [DBT_PROJECTS](DBT_PROJECTS.md).
+
 Project cần .dbtignore; runner tự thêm quy tắc bỏ qua `.ipynb_checkpoints`. Kiểm tra model/seed selection, lỗi trong Models/Logs của run, trạng thái SQL và catalog/schema đích. Dùng Open Docs cho snapshot docs đã thành công; bấm docs để tạo mới sau khi sửa model.
 
 ## Workflow không thấy file / không thấy sample cũ
