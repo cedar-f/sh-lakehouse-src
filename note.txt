@@ -86,3 +86,16 @@ PY
 
 bash scripts/rebuild.sh
 
+----------------------------------
+
+cd ~/data/sh-lakehouse-src
+
+docker_root=$(docker info --format '{{.DockerRootDir}}')
+df -h "$docker_root"
+df -i "$docker_root"
+docker system df
+
+
+
+docker builder prune -a -f
+docker image prune -f

@@ -50,6 +50,8 @@ Artifact endpoint chặn traversal, profiles.yml và secret-named files, có CSP
 
 UC R2 signer dùng JWT scope và thời hạn 1 giờ; API UC hiện không gắn privilege với identity người dùng. Parent credential còn có trong environment; không quảng bá đây là enforcement giữa hai host dùng chung R2 keys.
 
+Runtime environment có thêm `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, ánh xạ từ cùng R2 parent credential để S3A đọc trực tiếp file CSV/JSON/Parquet. Raw-path I/O dùng quyền của token R2 workspace; nó không đi qua UC table authorization. Đây là credential dùng chung cho workspace tin cậy, không phải quyền theo từng user. Không xuất env/alias vào Spark config, notebook output hoặc Git. Khi cần cô lập dữ liệu phải thay mô hình credential/authorization; scoped credential cho bảng không ngăn raw access bằng parent key còn hiện diện trong process.
+
 ## Registry metadata
 
 Registry proxy giữ trust boundary UC authorization disabled hiện có, không bổ sung RBAC. Control status/sync cần internal RUNNER_TOKEN, UI qua Jupyter auth. Chỉ xuất allowlist metadata, không xuất API credential hoặc env; custom properties vẫn là dữ liệu do user nhập và có thể nhạy cảm. Prefix registry private cùng bucket cần bảo vệ khỏi xóa/sửa trực tiếp. Client bypass proxy chỉ được reconcile sau poll; không cấp raw backend như một endpoint durable tương đương proxy. Một writer/registry namespace, không multi-host coordination service. Xem [CATALOG_REGISTRY](CATALOG_REGISTRY.md).

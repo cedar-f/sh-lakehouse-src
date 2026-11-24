@@ -55,6 +55,20 @@ Mở **Files**, bấm thư mục để mở/thu gọn cây. Load more tải tran
 
 File CSV/JSON/Parquet upload vẫn là file; notebook cần đọc file rồi ghi thành Delta để xuất hiện như table. Đường dẫn Spark dùng `s3://<bucket>/incoming/...` với format phù hợp. Thao tác ghi bảng qua Spark; không chỉnh thủ công nội dung `warehouse/` bằng file browser.
 
+Ví dụ đọc CSV trong cell Python, dùng đúng bucket và object key từ Files:
+
+```python
+import os
+path = f"s3a://{os.environ['R2_BUCKET']}/incoming/my_file.csv"
+df = (spark.read
+      .option("header", True)
+      .option("encoding", "UTF-8")
+      .csv(path))
+display(df.limit(20).toPandas())
+```
+
+Các cột mặc định là string; khai báo schema/cast trước khi ghi vào bảng có kiểu cụ thể. `s3://` và `s3a://` đều được project ánh xạ tới S3A. Compose cấp alias AWS từ R2 credential cho JVM, không cần điền key trong notebook. Đọc file trực tiếp dùng quyền R2 token workspace, không tự đăng ký file thành table hay enforce UC grants theo user. Nếu gặp `NoAuthWithAWSException`, xem [TROUBLESHOOTING](TROUBLESHOOTING.md).
+
 Mỗi file/thư mục con trong incoming có **Delete**; folder yêu cầu nhập full path. Đây là xóa vĩnh viễn, có status/counter và Stop after current batch; các phần đã xóa không được undo. Warehouse/backup/root incoming không có Delete. Hướng dẫn chi tiết: [REBUILD_DBT.md](REBUILD_DBT.md).
 
 ![Files sau thao tác xóa trong UI fixture](assets/files-delete-3.1.3.png)

@@ -39,6 +39,10 @@ S3_ENDPOINT=
 
 Trong bucket, `warehouse/` chứa dữ liệu bảng; `incoming/` chứa file upload; BACKUP_PREFIX chứa snapshot phục hồi. File upload chưa tự trở thành bảng Delta.
 
+Compose tự ánh xạ `R2_ACCESS_KEY_ID` → `AWS_ACCESS_KEY_ID` và `R2_SECRET_ACCESS_KEY` → `AWS_SECRET_ACCESS_KEY` cho các runtime container. Hadoop S3A dùng các tên AWS chuẩn khi đọc trực tiếp CSV/JSON/Parquet bằng `spark.read`; tên `R2_*` riêng của app không được SDK tự nhận diện. Chỉ điền credential một lần ở các biến R2, không dán key vào notebook hoặc Compute Extra Spark config. JupyterHub chuyển hai alias này cho single-user server; subprocess của runner kế thừa environment. Quyền raw path là quyền của R2 token workspace, xem [SECURITY](SECURITY.md).
+
+Sau khi đổi key hoặc cập nhật ánh xạ Compose, recreate notebook/sql/runner để JVM mới nhận environment. Đổi `os.environ` trong một cell Python không cập nhật environment của JVM đã chạy. Xem [TROUBLESHOOTING](TROUBLESHOOTING.md) cho `NoAuthWithAWSException`.
+
 ## Đăng nhập và secret nội bộ
 
 | Biến | Vai trò |

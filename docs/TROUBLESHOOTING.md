@@ -42,6 +42,37 @@ Dùng `CREATE TABLE ... USING DELTA ...`, kiểm tra `SELECT current_catalog(), 
 
 ## R2 403 / AccessDenied / Signature mismatch
 
+### `NoAuthWithAWSException` khi đọc CSV/JSON/Parquet
+
+Nếu traceback có `No AWS Credentials provided` và `Access key must be specified ... AWS_ACCESS_KEY_ID`, S3A chưa lấy được credential. Đây là lỗi xác thực ở client trước khi xác định object tồn tại/quyền đọc, không phải bằng chứng file sai delimiter hoặc R2 đã từ chối key.
+
+`compose.yaml` phải có hai alias dưới `x-runtime.environment: &env`:
+
+```yaml
+AWS_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?Fill R2_ACCESS_KEY_ID in .env}
+AWS_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?Fill R2_SECRET_ACCESS_KEY in .env}
+```
+
+Áp dụng cập nhật Compose cho single-user mode: lưu notebook/chờ job kết thúc, rồi chạy tại root repo:
+
+```bash
+docker compose config --quiet
+docker compose up -d --no-deps --no-build --force-recreate --wait --wait-timeout 900 notebook sql runner
+```
+
+Không cần build image khi chỉ bổ sung environment trong Compose. Hub mode cần image mới có allowlist AWS alias trong `hub_config.py`, sau đó restart single-user server. Sau recreate, mở notebook với kernel mới. Kiểm tra bằng cell Python, chỉ in trạng thái có/không:
+
+```python
+import os
+print({name: bool(os.getenv(name)) for name in
+       ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
+        "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")})
+```
+
+Các giá trị cần là True. Alias phải có từ lúc JVM khởi động; gán `os.environ` sau đó trong notebook không sửa environment JVM cũ. Không cần lưu credential vào Compute hoặc source notebook. Nếu dùng custom `fs.s3a.aws.credentials.provider`, kiểm tra nó có hỗ trợ nguồn credential mong muốn. Đọc raw path dùng quyền R2 token workspace, xem [SECURITY](SECURITY.md).
+
+### Provider đã có credential nhưng R2 trả lỗi
+
 Kiểm tra 4 biến R2, bucket/endpoint và quyền S3 credential. Secret Access Key khác token Bearer. Kiểm tra đồng hồ host nếu chữ ký không hợp lệ. Khi chia sẻ log, che credential; không đăng `.env` công khai. UC metadata kết nối được chưa bảo đảm credential storage đúng.
 
 ## Registry pending / startup conflict
