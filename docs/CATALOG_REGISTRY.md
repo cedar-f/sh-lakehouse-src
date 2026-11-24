@@ -11,11 +11,12 @@ Registry giữ định nghĩa portable của UC độc lập với vòng đời 
 | External volume | catalog/schema/name, comment, type và storage_location | Đăng ký lại cùng location, không ghi file dữ liệu |
 | External Delta table | Namespace/name, location, columns, properties, comment, format/type | Đăng ký metadata qua UC API, không copy hoặc overwrite Delta |
 | Function | Namespace, tham số/return types, body/language, comment và flags UC trả về | Tạo lại definition sau namespace; không thực thi code |
+| SQL View có definition đầy đủ | Namespace/name, columns, view_definition, view_dependencies, comment và properties | Đăng ký lại sau sources/functions theo thứ tự dependency; không copy dữ liệu |
 | Managed table/volume và các loại table khác | Giữ inventory/định nghĩa để không mất dấu location | Không replay thành external hoặc cấp một managed location mới để giả phục hồi; báo unrestored |
 
 Object unrestored được hiện trong Compute. Registry vẫn giữ bản ghi nếu namespace cha còn, và chặn tạo table/volume cùng tên qua proxy để tránh thay thế inventory cũ. Sau khi khôi phục bằng phương án riêng và UC có object cùng tên, định nghĩa UC mới thay bản inventory. DROP namespace cha chủ động sẽ loại inventory con khỏi registry ở lần sync kế tiếp. Phục hồi managed nguyên trạng cần database UC tương thích; không tự sửa ID/coordinator hoặc Delta log để ép nhận lại.
 
-Owner, grants, ID/audit timestamps UC, models/views đầy đủ, Spark config, env, credential, notebook, Git, workflow và run history không được phục hồi bởi registry này. Field cấu hình được giữ là properties/storage root của UC, không phải mọi cấu hình của server. Secret kết nối vẫn ở env/secret store.
+Owner, grants, ID/audit timestamps UC, models, metric/materialized views, Spark config, env, credential, notebook, Git, workflow và run history không được phục hồi bởi registry này. View cũ thiếu definition hoặc có dependency chưa phục hồi chỉ giữ inventory và báo unrestored. UC cấp ID/audit mới khi replay. Field cấu hình được giữ là properties/storage root của UC, không phải mọi cấu hình của server. Secret kết nối vẫn ở env/secret store.
 
 ## Vị trí và cấu hình
 
@@ -28,7 +29,7 @@ UC_REGISTRY_SYNC_SECONDS=60
 REGISTRY_MEMORY=256m
 ```
 
-Các biến có default nên env cũ không bắt buộc thêm ngay. Prefix phải riêng, không nằm trong warehouse/incoming; không đặt lifecycle xóa registry nếu muốn dùng để dựng lại host. Chỉ dùng cùng bucket cấu hình; location trong registry phải là path s3/s3a thuộc bucket đó. Identifier phải theo quy tắc tên của UI project. JSON tối đa 16 MiB, có version/bucket và kiểm quan hệ cha/con. Manifest v2 bổ sung functions; code mới đọc v1 và conditional-upgrade lên v2 tại cùng key. Code cũ từ chối v2; xem [FUNCTIONS](FUNCTIONS.md) trước rollback.
+Các biến có default nên env cũ không bắt buộc thêm ngay. Prefix phải riêng, không nằm trong warehouse/incoming; không đặt lifecycle xóa registry nếu muốn dùng để dựng lại host. Chỉ dùng cùng bucket cấu hình; location trong registry phải là path s3/s3a thuộc bucket đó. Identifier phải theo quy tắc tên của UI project. JSON tối đa 16 MiB, có version/bucket và kiểm quan hệ cha/con. Code đọc v1/v2/v3: v2 thêm functions, v3 thêm SQL view definition/dependency. Sync nâng lên v3 bằng conditional PUT tại cùng key khi có view definition; không tự hạ v3 khi view bị xóa. Tên prefix `/v1/` là vị trí object, không là version nội dung JSON. Code cũ từ chối version chưa hỗ trợ; xem [VIEWS](VIEWS.md), [FUNCTIONS](FUNCTIONS.md) trước rollback.
 
 Registry là object private, dùng bộ R2 S3 credential hiện có; không có secret cố định hoặc temporary credential được xuất từ UC. Function source/defaults có thể chứa literal nhạy cảm do tác giả nhập; không ghi credential trong function. Custom properties có thể chứa nội dung do người dùng đặt nên cần bảo vệ registry như metadata nhạy cảm. Không public bucket/prefix.
 
@@ -40,7 +41,9 @@ PostgreSQL healthy → UC backend healthy + runtime-init complete
 → registry healthy → bootstrap → notebook/SQL → runner → Kestra
 ```
 
-Nếu R2 chưa có registry, service xuất UC hiện tại thành registry mới bằng conditional create. Nếu UC trống và registry hợp lệ đã có, phục hồi catalog → schema → external volume → external Delta table → functions trước bootstrap. Catalog/schema rỗng vẫn có bản ghi riêng. Restore ngắt giữa chừng có marker local để tiếp tục idempotent; object có tên trùng nhưng định nghĩa khác bị từ chối, không tự ghi đè.
+Nếu R2 chưa có registry, service xuất UC hiện tại thành registry mới bằng conditional create. Nếu UC trống và registry hợp lệ đã có, phục hồi catalog → schema → external volume → external Delta table → functions → SQL views theo dependency trước bootstrap. Catalog/schema rỗng vẫn có bản ghi riêng. Restore ngắt giữa chừng có marker local để tiếp tục idempotent; object có tên trùng nhưng định nghĩa khác bị từ chối, không tự ghi đè.
+
+View được UC lưu trong tables với table_type=VIEW, nên Compute counts.tables bao gồm views. Registry kiểm full names của dependencies, tối đa 1000/view; nguồn thiếu, dependency vòng hoặc managed source chưa phục hồi được báo unrestored, không giả chuyển view thành external table. Native Spark phân tích/thực thi query khi sử dụng; REST replay definition không chạy query hoặc materialize kết quả. Xem [VIEWS](VIEWS.md).
 
 Nếu UC đã có metadata khác registry và không có lineage local khớp, service không chọn bên nào thay người vận hành. Startup dừng với thông báo conflict. Chỉ một host được quản lý registry tại một thời điểm; đây không phải cơ chế workspace đa writer.
 

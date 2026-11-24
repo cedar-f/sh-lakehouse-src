@@ -12,9 +12,9 @@ SERVICE = os.getenv('LAKEHOUSE_SERVICE', 'notebook')
 SETTINGS = ROOT / '.lakehouse' / 'spark.json'
 IDENT = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 PACKAGES = ','.join([
-    'org.apache.hadoop:hadoop-aws:3.4.1',
-    'io.delta:delta-spark_4.0_2.13:4.3.1',
-    'io.unitycatalog:unitycatalog-spark_4.0_2.13:0.7.0',
+    'org.apache.hadoop:hadoop-aws:3.4.2',
+    'io.delta:delta-spark_4.2_2.13:4.4.1',
+    'io.unitycatalog:unitycatalog-spark_4.2_2.13:0.7.0',
 ])
 
 def timezone_name():
@@ -56,6 +56,7 @@ def settings():
     return result
 
 def spark_conf():
+    import pyspark
     clean_local_spark_temp()
     s = settings()
     identifier(s['default_catalog']); identifier(s['default_schema'])
@@ -68,10 +69,13 @@ def spark_conf():
         'spark.driver.memory':s['driver_memory'],
         'spark.sql.shuffle.partitions':str(s['shuffle_partitions']),
         'spark.jars.packages':PACKAGES,
-        'spark.jars.ivy':str(Path.home()/'.ivy2'),
+        # Keep Spark 4.0/4.2 connector classes out of the same driver classpath.
+        'spark.jars.ivy':str(Path.home()/'.ivy2'/'spark-4.2.0'),
         # Thrift worker threads also need Delta/UC on the JVM application classpath.
-        'spark.driver.extraClassPath':str(Path.home()/'.ivy2'/'jars'/'*'),
+        'spark.driver.extraClassPath':str(Path.home()/'.ivy2'/'spark-4.2.0'/'jars'/'*'),
         'spark.sql.extensions':'io.delta.sql.DeltaSparkSessionExtension',
+        # Keep classic spark.sql(args=...) binding with Delta's injected parser.
+        'spark.sql.legacy.parameterSubstitution.constantsOnly':'true',
         'spark.sql.catalog.spark_catalog':'org.apache.spark.sql.delta.catalog.DeltaCatalog',
         'spark.sql.defaultCatalog':s['default_catalog'],
         'spark.hadoop.fs.s3.impl':'org.apache.hadoop.fs.s3a.S3AFileSystem',
@@ -98,6 +102,10 @@ def spark_conf():
     for key,value in s.get('extra',{}).items():
         if not key.startswith(allowed): raise ValueError('Unsupported Spark setting: '+key)
         conf[key] = str(value)
+    # Spark's own Netty/Jackson versions must win over transitive UC dependencies.
+    conf['spark.driver.extraClassPath']=os.pathsep.join([
+        str(Path(pyspark.__file__).parent/'jars'/'*'),
+        str(Path(conf['spark.jars.ivy'])/'jars'/'*')])
     return conf
 
 def clean_local_spark_temp(now=None):

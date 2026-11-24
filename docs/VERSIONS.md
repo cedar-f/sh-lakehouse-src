@@ -6,11 +6,11 @@ Phiên bản application lấy từ RELEASE.json và package metadata trong sour
 |---|---|
 | App / frontend package | 3.1.3; hotfix đóng gói image theo Git commit |
 | UC image | unitycatalog/unitycatalog:v0.7.0 |
-| UC Spark connector | io.unitycatalog:unitycatalog-spark_4.0_2.13:0.7.0 |
-| PySpark | 4.0.1 |
-| Delta Python package | delta-spark 4.3.1 |
-| Delta Spark connector | io.delta:delta-spark_4.0_2.13:4.3.1 |
-| Hadoop AWS Maven | org.apache.hadoop:hadoop-aws:3.4.1 |
+| UC Spark connector | io.unitycatalog:unitycatalog-spark_4.2_2.13:0.7.0 |
+| PySpark | 4.2.0 |
+| Delta Python package | delta-spark 4.4.1 |
+| Delta Spark connector | io.delta:delta-spark_4.2_2.13:4.4.1 |
+| Hadoop AWS Maven | org.apache.hadoop:hadoop-aws:3.4.2 |
 | Java/runtime base | eclipse-temurin:17-jdk-jammy |
 | Python trong image | Python 3 từ Ubuntu Jammy apt; patch version không pin riêng |
 | PostgreSQL | postgres:16.6 |
@@ -46,6 +46,12 @@ docker compose exec -T runner dbt --version
 Ghi riêng image ID Kestra từ `docker compose images`, thông tin CPU/RAM/disk/OS, commit config proxy và thời gian TZ. Root API/schema compatibility xác nhận bằng checklist, không chỉ bằng version string.
 
 ## Khi nâng dependency
+
+Native UC views yêu cầu Spark 4.2; runtime pin các phiên bản tương ứng trong bảng. Không trộn connector `_4.0` với Spark 4.2. Kiểm Extra Spark config trong Compute nếu từng tự override `spark.jars.packages`; bỏ override cũ hoặc cập nhật cả bộ tương thích trước restart.
+
+Ivy cache mới ở `~/.ivy2/spark-4.2.0` trong volume hiện có; cache phiên bản trước được giữ cho rollback. Helper `spark-package-resolver.jar` tải dependency trước lần khởi động JVM chính để connector có trên application classpath cả khi cache trống. Spark bundled jars đứng trước Ivy jars để tránh UC transitive Netty/Jackson ghi đè phiên bản engine. Những lần sau dùng marker có kiểm file jar; package set thay đổi hoặc jar bị thiếu sẽ resolve lại. Không tự xóa cache đang dùng. Lần đầu cần mạng/disk và có thể lâu hơn health startup thông thường.
+
+Final JVM dùng danh sách jar đã resolve, không chạy lại vòng tải package qua Ivy. Runtime đặt `spark.sql.legacy.parameterSubstitution.constantsOnly=true` để giữ bind `spark.sql(..., args=...)` cho query/DML khi Delta inject parser trên Spark 4.2. Chưa hỗ trợ mở rộng parameter marker vào mọi vị trí literal DDL mới của engine. Xem định nghĩa [SQLConf Spark 4.2](https://raw.githubusercontent.com/apache/spark/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala); regression phải kiểm cả named/positional args khi có Delta extension.
 
 Nâng Spark/Delta/UC theo một change set có test tương thích Scala coordinates, managed/external tables, fresh Thrift session, R2 credential expiry/read/write, dbt seed/build/tests/docs và restore. Nâng Kestra cần test namespace API `/api/v1/main`, Basic auth, HTTP task timeout/retry và retention flow. Không đổi digest Kestra sang latest để chữa lỗi login.
 

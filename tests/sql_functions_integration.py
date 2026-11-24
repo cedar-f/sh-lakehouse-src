@@ -53,23 +53,29 @@ def stage(phase):
         if phase=='create':
             uc('POST','catalogs',{'name':'tools'});uc('POST','schemas',{'catalog_name':'tools','name':'calc'})
         jars=[]
-        for artifact in ('delta-spark_4.0_2.13','delta-storage'):
+        for artifact in ('delta-spark_4.2_2.13','delta-storage'):
             jar=root/(artifact+'.jar')
-            urllib.request.urlretrieve(f'https://repo.maven.apache.org/maven2/io/delta/{artifact}/4.3.1/{artifact}-4.3.1.jar',jar);jars.append(str(jar))
+            urllib.request.urlretrieve(f'https://repo.maven.apache.org/maven2/io/delta/{artifact}/4.4.1/{artifact}-4.4.1.jar',jar);jars.append(str(jar))
         home=Path(pyspark.__file__).parent
         command=[str(home/'bin/spark-submit'),'--master','local[2]','--driver-memory','1g','--class',
-                 'org.apache.spark.sql.hive.thriftserver.HiveThriftServer2','--jars',','.join(jars)]
-        conf={'spark.driver.extraClassPath':':'.join(jars),'spark.sql.extensions':'io.delta.sql.DeltaSparkSessionExtension',
+                 'org.apache.spark.sql.hive.thriftserver.HiveThriftServer2']
+        conf={'spark.driver.extraClassPath':str(home/'jars'/'*')+':'+':'.join(jars)+':/fixture/ivy/jars/*','spark.jars.ivy':'/fixture/ivy','spark.sql.extensions':'io.delta.sql.DeltaSparkSessionExtension',
+              'spark.sql.catalog.tools':'io.unitycatalog.spark.UCSingleCatalog',
+              'spark.sql.catalog.tools.uri':'http://127.0.0.1:8080','spark.sql.catalog.tools.auth.type':'static','spark.sql.catalog.tools.auth.token':'not-used',
               'spark.sql.catalog.spark_catalog':'org.apache.spark.sql.delta.catalog.DeltaCatalog','spark.ui.enabled':'false',
+              'spark.sql.legacy.parameterSubstitution.constantsOnly':'true',
               'spark.sql.warehouse.dir':(root/'warehouse').as_uri(),'spark.sql.hive.thriftServer.singleSession':'false',
               'spark.hadoop.hive.server2.authentication':'NOSASL','spark.hadoop.hive.server2.thrift.bind.host':'127.0.0.1',
               'spark.hadoop.javax.jdo.option.ConnectionURL':'jdbc:derby:'+str(root/'metastore')+';create=true'}
+        from spark_dependencies import prepare
+        conf.update({'spark.jars':','.join(jars),'spark.jars.packages':'io.unitycatalog:unitycatalog-spark_4.2_2.13:0.7.0,software.amazon.awssdk:auth:2.54.18,software.amazon.awssdk:sts:2.54.18'})
+        prepare(conf)
         for k,v in conf.items():command+=['--conf',k+'='+v]
         command+=[str(next((home/'jars').glob('spark-hive-thriftserver_*.jar')))]
         def start_sql():
             log=(root/'sql.log').open('w');process=subprocess.Popen(command,cwd=root,stdout=log,stderr=subprocess.STDOUT)
             from pyhive import hive
-            for _ in range(120):
+            for _ in range(300):
                 if process.poll() is not None:raise RuntimeError((root/'sql.log').read_text()[-5000:])
                 try:c=hive.connect(host='127.0.0.1',port=10000,auth='NOSASL');c.close();return process
                 except Exception:time.sleep(1)
@@ -85,6 +91,16 @@ def stage(phase):
             assert response.status_code==200,response.text
             return response.json()
         if phase=='create':
+            created=client.post('/views',json={'name':'tools.calc.z_base_view','sql':'SELECT 40 AS value','comment':"Finance's view"},headers=headers)
+            assert created.status_code==200,created.text
+            assert created.json()['view_definition'] and created.json()['table_type']=='VIEW'
+            assert created.json()['comment']=="Finance's view",created.json()
+            sql('CREATE VIEW tools.calc.a_dependent_view AS SELECT value + 2 AS answer FROM tools.calc.z_base_view')
+            assert sql('SELECT * FROM tools.calc.a_dependent_view')['rows']==[[42]]
+            sql('CREATE VIEW tools.calc.dropped_view AS SELECT 0 AS value')
+            dropped=client.post('/views/delete',json={'names':['tools.calc.dropped_view'],'confirmed_names':['tools.calc.dropped_view'],'confirmation':'DELETE'},headers=headers)
+            assert dropped.status_code==200 and dropped.json()['deleted']==1,dropped.text
+            print('PASS native UC views via runner API and SQL, dependent view, metadata/comment, DROP VIEW',flush=True)
             sql("CREATE FUNCTION tools.calc.add_one(value INT) RETURNS INT COMMENT 'Persisted SQL' RETURN value + 1")
             assert sql('SELECT tools.calc.add_one(10) AS result')['rows']==[[11]]
             sql('CREATE OR REPLACE FUNCTION tools.calc.add_one(value INT) RETURNS INT RETURN value + 2')
@@ -112,9 +128,9 @@ def stage(phase):
             import spark_session
             # Replace only environment-specific Spark configuration; run the
             # production create_spark() factory and startup/SQL magic unchanged.
-            fixture_config="""import spark_session
-spark_session.spark_conf=lambda:{'spark.master':'local[1]','spark.driver.memory':'512m','spark.ui.enabled':'false'}
-spark_session.settings=lambda:{'driver_memory':'512m','default_schema':'default'}
+            notebook_conf={**conf,'spark.master':'local[1]','spark.driver.memory':'768m','spark.jars':','.join(jars),
+                'spark.jars.packages':'io.unitycatalog:unitycatalog-spark_4.2_2.13:0.7.0,software.amazon.awssdk:auth:2.54.18,software.amazon.awssdk:sts:2.54.18'}
+            fixture_config="import spark_session\nspark_session.spark_conf=lambda:"+repr(notebook_conf)+"\n"+"""spark_session.settings=lambda:{'driver_memory':'768m','default_schema':'default'}
 spark_session.refresh_catalogs=lambda _:[]
 """
             exec(fixture_config)
@@ -126,7 +142,11 @@ spark_session.refresh_catalogs=lambda _:[]
             assert shell.run_cell('%%sql\nSELECT tools.calc.notebook_fn(5) AS result').error_in_exec is None
             assert shell.user_ns['_last_sql_df'].collect()[0][0]==10
             assert notebook.sql('SELECT tools.calc.add_one(:x) AS result',args={'x':8}).collect()[0][0]==10
+            assert notebook.sql('SELECT tools.calc.add_one(?) AS result',args=[8]).first()[0]==10
             assert sql('SELECT tools.calc.notebook_fn(10) AS result')['rows']==[[15]]
+            assert shell.run_cell('%%sql\nCREATE VIEW tools.calc.notebook_view AS SELECT answer FROM tools.calc.a_dependent_view').error_in_exec is None
+            assert notebook.sql('SELECT * FROM tools.calc.notebook_view').first()[0]==42
+            assert sql('SELECT * FROM tools.calc.notebook_view')['rows']==[[42]]
             notebook.stop()
             print('PASS notebook %%sql and spark.sql(parameter args), shared UC function callable from SQL editor',flush=True)
             ipython=Path('/tmp/function-ipython/profile_default/startup');ipython.mkdir(parents=True)
@@ -136,10 +156,13 @@ spark_session.refresh_catalogs=lambda _:[]
             path=Path(os.environ['WORKSPACE_ROOT'])/'function.ipynb'
             nbformat.write(nbformat.v4.new_notebook(cells=[
                 nbformat.v4.new_code_cell('%%sql\nCREATE FUNCTION tools.calc.workflow_fn(v INT) RETURNS INT RETURN v + 7'),
+                nbformat.v4.new_code_cell('%%sql\nCREATE VIEW tools.calc.workflow_view AS SELECT * FROM tools.calc.notebook_view'),
+                nbformat.v4.new_code_cell("set_output('view_result', spark.sql('SELECT * FROM tools.calc.workflow_view').first()[0])"),
                 nbformat.v4.new_code_cell("set_output('result', spark.sql('SELECT tools.calc.workflow_fn(3)').first()[0])")]),path)
             result=execute_workflow({'id':'notebook_function_flow','nodes':[{'id':'notebook','kind':'notebook','path':'function.ipynb'}]},
                 'notebook-function-fixture',{},runner.execute)
             assert result['status']=='SUCCESS' and result['outputs']['notebook']['result']==10,result
+            assert result['outputs']['notebook']['view_result']==42,result
             print('PASS workflow notebook kernel: automatic startup, CREATE FUNCTION, SELECT and captured output',flush=True)
             server.terminate();server.wait(timeout=25);server=start_sql()
             assert sql('SELECT tools.calc.twice(10) AS result')['rows']==[[24]]
@@ -148,6 +171,11 @@ spark_session.refresh_catalogs=lambda _:[]
             assert response.status_code==400 and 'not found' in response.text
             print('PASS fresh SQL service reload, DROP FUNCTION and no stale managed-name calls',flush=True)
         else:
+            assert sql('SELECT * FROM tools.calc.a_dependent_view')['rows']==[[42]]
+            assert sql('SELECT * FROM tools.calc.workflow_view')['rows']==[[42]]
+            assert uc('GET','tables/tools.calc.z_base_view')['comment']=="Finance's view"
+            assert not any(t['name']=='dropped_view' for t in uc('GET','tables',params={'catalog_name':'tools','schema_name':'calc'})['tables'])
+            print('PASS native SQL view replay in dependency order from R2 registry v3',flush=True)
             assert sql('SELECT tools.calc.twice(10) AS result')['rows']==[[24]]
             assert sql('SELECT tools.calc.notebook_fn(5) AS result')['rows']==[[10]]
             assert sql('SELECT tools.calc.workflow_fn(3)')['rows']==[[10]]
@@ -157,6 +185,10 @@ spark_session.refresh_catalogs=lambda _:[]
         assert json.loads(Path('/fixture/current.json').read_text())['functions']
     except Exception:
         print('REGISTRY LOG:',(root/'registry.log').read_text()[-12000:],flush=True)
+        if (root/'sql.log').exists():
+            text=(root/'sql.log').read_text()
+            print('SQL START:',text[:10000],flush=True)
+            print('SQL CAUSES:','\n'.join(line for line in text.splitlines() if 'Caused by:' in line or 'ClassNotFoundException' in line or 'NoClassDefFound' in line),flush=True)
         print('SQL LOG:',(root/'sql.log').read_text()[-4000:] if (root/'sql.log').exists() else '',flush=True)
         raise
     finally:

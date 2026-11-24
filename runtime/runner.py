@@ -313,6 +313,22 @@ def tables_delete(payload:dict):
 @app.get('/sql/status',dependencies=[Depends(auth)])
 def sql_status(): return read_json(SQL_CONTROL/'status.json') or {'state':'UNKNOWN'}
 
+
+@app.post('/views',dependencies=[Depends(auth)])
+def views_create(payload:dict):
+    from view_actions import create_view
+    try:
+        with LOCK:return create_view(payload,uc,sql_query)
+    except Exception as error:raise HTTPException(400,str(error))
+
+
+@app.post('/views/delete',dependencies=[Depends(auth)])
+def views_delete(payload:dict):
+    from view_actions import drop_views
+    try:
+        with LOCK:return drop_views(payload,uc,sql_query)
+    except ValueError as error:raise HTTPException(400,str(error))
+
 def validated_config(payload):
     import re
     identifier(payload['default_catalog']); identifier(payload['default_schema'])

@@ -39,6 +39,8 @@ set_output("count", 10)
 
 Table detail hiển thị trạng thái authorization hiện tại; xem [FEATURES.md](FEATURES.md) trước khi coi đó là cơ chế cấp quyền theo user.
 
+Danh sách có Created, Updated và Object ID từ UC; detail hiển thị owner/audit/properties khi có. **Catalog details** và **Schema details** mở metadata namespace đang chọn. Ngày giờ dùng TZ workspace. Không có field từ UC thì hiện Not reported, không suy ra từ storage. Chọn **Asset type → Views** để quản lý view riêng; **+ View** nhận SELECT/WITH và comment, detail có definition/dependency/preview. Hướng dẫn và giới hạn tại [VIEWS](VIEWS.md).
+
 ### Copy tên và xóa nhiều bảng
 
 Copy full name ở từng hàng hoặc table detail sao chép catalog.schema.table; có fallback copy cho HTTP không có Clipboard API. Tick checkbox từng bảng hoặc Select all visible tables, bấm Delete selected tables. Tối đa 100 bảng mỗi batch. Kiểm danh sách tên đầy đủ và nhập DELETE để xác nhận; không xóa theo chuỗi search hoặc wildcard. Bảng được chọn nhưng bị ẩn bởi filter vẫn nằm trong danh sách xác nhận.
@@ -54,6 +56,8 @@ Bấm + Function để đăng ký Python/SQL definition, bấm tên để xem pa
 Mở **Files**, bấm thư mục để mở/thu gọn cây. Load more tải trang tiếp theo trong nhánh. Chọn Upload folder dưới `incoming/`, kéo thả nhiều file hoặc click vùng upload. Progress cập nhật theo part 32 MiB. Để resume, chọn lại đúng file với cùng tên/kích thước/thời gian sửa. File cùng tên đã tồn tại cần tên/path khác.
 
 File CSV/JSON/Parquet upload vẫn là file; notebook cần đọc file rồi ghi thành Delta để xuất hiện như table. Đường dẫn Spark dùng `s3://<bucket>/incoming/...` với format phù hợp. Thao tác ghi bảng qua Spark; không chỉnh thủ công nội dung `warehouse/` bằng file browser.
+
+Mỗi file/folder có **Copy path** để lấy `s3a://...`, và **Details** mở metadata, copy ID/path, download hoặc copy ví dụ đọc CSV/JSON/Parquet. File hiện Last-Modified; R2 không cung cấp ngày tạo gốc. Folder virtual không có metadata riêng; ID Files là địa chỉ bucket/key, khác UUID UC. Xem [FILES](FILES.md).
 
 Ví dụ đọc CSV trong cell Python, dùng đúng bucket và object key từ Files:
 

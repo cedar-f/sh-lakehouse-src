@@ -37,6 +37,11 @@ Thông tin thực tế chưa có trong repo cần người vận hành điền; 
 
 ## B. SQL, UC và Files
 
+- Catalog: Created/Updated/UUID đúng metadata UC và TZ workspace; Catalog/Schema details, columns/properties/owner, copy full name; Refresh không reset filter.
+- Files: copy file/folder/root `s3a://` path, Details file/folder/HEAD errors, size/ETag/content type, Created không suy diễn và virtual folder không có ID/date giả. Xem [FILES](FILES.md).
+- View: tạo native UC view cùng view phụ thuộc, đọc từ session mới; xem SQL/dependency/columns, copy và confirmed multi-delete. Sync registry v3, diễn tập replay UC fixture rồi SELECT. View mất source phải unrestored; không DROP nhầm table. Xem [VIEWS](VIEWS.md).
+- Engine: Spark 4.2/Delta 4.4/UC connector đúng coordinate; cold-cache startup và dbt seed/build/test/docs đạt. Không chạy OR REPLACE View lặp lại theo giả định engine hỗ trợ.
+
 Trong SQL editor chạy SQL thuần; notebook SQL cell thêm %%sql:
 
 ```sql

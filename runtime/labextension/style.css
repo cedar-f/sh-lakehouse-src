@@ -14,6 +14,15 @@
 .lh-tree-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .lh-tree-folder>.lh-tree-row>.lh-tree-name{font-weight:500}
 .lh-tree-size{flex:0 0 auto;font-size:11px;padding-left:18px}
+.lh-tree-date{flex:0 0 auto;font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.lh-root .lh-tree-action{flex:0 0 auto;padding:3px 7px;font-size:11px}
+.lh-asset-properties{display:grid;grid-template-columns:minmax(140px,190px) minmax(0,1fr);gap:0;margin:12px 0;border:1px solid var(--jp-border-color2);border-radius:7px;overflow:hidden}
+.lh-asset-properties dt,.lh-asset-properties dd{margin:0;padding:9px 12px;border-bottom:1px solid var(--jp-border-color2);overflow-wrap:anywhere;white-space:pre-wrap}
+.lh-asset-properties dt{font-weight:600;background:var(--jp-layout-color1)}
+.lh-asset-properties dd{font-family:var(--jp-code-font-family);font-size:12px}
+.lh-file-detail{scroll-margin-top:15px}.lh-download-link{display:inline-block;margin:8px 0}
+.lh-asset-summary{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.lh-asset-summary .lh-card{margin:0;min-width:120px}
+@media(max-width:700px){.lh-asset-properties{grid-template-columns:120px minmax(0,1fr)}.lh-tree-date{display:none}}
 .lh-tree-status,.lh-tree-empty{padding:5px 8px;font-size:12px}
 .lh-tree-status:empty{display:none}
 .lh-root .lh-tree-more{margin:5px 7px;font-size:12px}

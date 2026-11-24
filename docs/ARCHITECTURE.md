@@ -33,6 +33,10 @@ flowchart LR
 
 SQL/dbt không chạy trong kernel notebook đang mở. `SPARK_THREADS` là local parallelism trong từng Spark JVM, không cấp worker từ host khác. `POOL(max_workers=2)` của runner không có nghĩa hai job I/O cùng chạy: `LOCK` tuần tự hóa execute và SQL gateway. Kernel tương tác có thể hoạt động ngoài lock.
 
+Native SQL views dùng ViewCatalog của UC connector cho Spark 4.2, có metadata trong UC tables collection và portable definition/dependency trong registry R2. Không có service view riêng hay bản copy kết quả. Spark phân tích query; registry replay metadata theo dependency, nguồn chưa phục hồi được báo unrestored. Xem [VIEWS](VIEWS.md). SQL function gateway vẫn là lớp riêng theo [FUNCTIONS](FUNCTIONS.md).
+
+Trước khi khởi động JVM notebook/Thrift, runtime resolve Maven qua helper không tạo SparkContext và cache có khóa. Final driver classpath ưu tiên bundled Spark jars rồi Ivy connector jars; cache tách phiên bản tránh class trùng từ engine cũ. Xem [VERSIONS](VERSIONS.md). Files metadata đọc LIST/HEAD có giới hạn, không quét subtree để giả metadata folder; UC IDs và R2 bucket/key addresses được phân biệt trong UI theo [FILES](FILES.md).
+
 | Service | Khởi động/tiến trình | Trách nhiệm |
 |---|---|---|
 | postgres | PostgreSQL 16.6 | Database unitycatalog và kestra trong cùng postgres_data |

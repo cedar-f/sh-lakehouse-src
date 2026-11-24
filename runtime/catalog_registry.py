@@ -21,7 +21,7 @@ FIELDS = {
     'schemas': ('name', 'catalog_name', 'comment', 'properties', 'storage_root', 'storage_location'),
     'volumes': ('name', 'catalog_name', 'schema_name', 'comment', 'volume_type', 'storage_location'),
     'tables': ('name', 'catalog_name', 'schema_name', 'comment', 'properties', 'table_type',
-               'data_source_format', 'columns', 'storage_location'),
+               'data_source_format', 'columns', 'storage_location', 'view_definition', 'view_dependencies'),
     'functions': FUNCTION_FIELDS,
 }
 
@@ -58,8 +58,31 @@ def fingerprint(document):
     return hashlib.sha256(json.dumps(logical, sort_keys=True).encode()).hexdigest()
 
 
+def portable_table(record):
+    return (record.get('table_type')=='EXTERNAL' and record.get('data_source_format')=='DELTA' or
+            record.get('table_type')=='VIEW' and bool(record.get('view_definition')) and bool(record.get('columns')))
+
+
+def view_dependencies(record):
+    result={'tables':set(),'functions':set()}
+    value=record.get('view_dependencies') or {}
+    if not isinstance(value,dict) or not isinstance(value.get('dependencies',[]),list):raise ValueError('Invalid view dependencies')
+    if len(value.get('dependencies',[]))>1000:raise ValueError('Too many view dependencies')
+    for dependency in value.get('dependencies',[]):
+        if not isinstance(dependency,dict):raise ValueError('Invalid view dependency')
+        if sum(dependency.get(k) is not None for k in ('table','function'))!=1:raise ValueError('A view dependency must name one table or function')
+        for key,kind in (('table','tables'),('function','functions')):
+            item=dependency.get(key)
+            if item is None:continue
+            full=item.get(key+'_full_name') if isinstance(item,dict) else None
+            if not isinstance(full,str) or len(full.split('.'))!=3:raise ValueError('Invalid dependency name')
+            for part in full.split('.'):identifier(part)
+            result[kind].add(full)
+    return result
+
+
 def validate(document, bucket):
-    if document.get('version') not in (1,2) or document.get('bucket') != bucket:
+    if document.get('version') not in (1,2,3) or document.get('bucket') != bucket:
         raise ValueError('Registry version or bucket mismatch; registry was not modified')
     if document['version']==1:document.setdefault('functions',[])
     for kind in FIELDS:
@@ -76,6 +99,10 @@ def validate(document, bucket):
             if name(r) in seen: raise ValueError('Duplicate registry record: ' + name(r))
             seen.add(name(r))
             if kind=='functions':validate_function(r)
+            if kind=='tables' and r.get('table_type')=='VIEW':
+                if r.get('view_definition') is not None and (not isinstance(r['view_definition'],str) or not r['view_definition'].strip() or len(r['view_definition'].encode())>1024*1024):
+                    raise ValueError('Invalid SQL view definition')
+                view_dependencies(r)
             if kind!='functions' and r.get('properties') is not None and (not isinstance(r['properties'], dict) or
                 any(not isinstance(k, str) or not isinstance(v, str) for k, v in r['properties'].items())):
                 raise ValueError('Invalid registry properties')
@@ -115,7 +142,7 @@ class Upstream:
             seen.add(token); params['page_token'] = token
 
     def scan(self, bucket):
-        result = {'version': 2, 'bucket': bucket, **{k: [] for k in FIELDS}}
+        result = {'version': 3, 'bucket': bucket, **{k: [] for k in FIELDS}}
         for c in self.listing('catalogs'):
             result['catalogs'].append(self.request('GET', 'catalogs/' + quote(c['name'], safe='')))
             for s in self.listing('schemas', catalog_name=c['name']):
@@ -170,13 +197,17 @@ class Registry:
                       'restoring': True, 'unrestored': []}
         self.save()
         live = self.uc.scan(self.bucket)
+        deferred=[]
+        available={kind:{name(r) for r in live[kind]} for kind in FIELDS}
         for kind in FIELDS:
             existing = {name(r): r for r in live[kind]}
             for r in document[kind]:
+                if kind=='tables' and r.get('table_type')=='VIEW' and portable_table(r):
+                    deferred.append(r);continue
                 if kind == 'volumes' and r.get('volume_type') != 'EXTERNAL' or (
-                    kind == 'tables' and (r.get('table_type') != 'EXTERNAL' or r.get('data_source_format') != 'DELTA')):
+                    kind == 'tables' and not portable_table(r)):
                     self.state['unrestored'].append({'kind': kind, 'record': r,
-                        'reason': 'Only external Delta tables and external volumes can be replayed safely'})
+                        'reason': 'Requires separate recovery: only external Delta tables, external volumes and complete SQL views can be replayed safely'})
                     continue
                 payload = {k: v for k, v in r.items() if not (kind in ('catalogs', 'schemas') and k == 'storage_location')
                            and not (k == 'comment' and not v)}
@@ -188,6 +219,24 @@ class Registry:
                         raise ValueError('Restore conflict at ' + kind + '/' + name(r))
                 else:
                     self.uc.request('POST', kind, {'function_info':payload} if kind=='functions' else payload)
+                available[kind].add(name(r))
+        existing={name(r):r for r in live['tables']}
+        while deferred:
+            waiting=[];progress=False
+            for r in deferred:
+                dependencies=view_dependencies(r)
+                if name(r) not in existing and any(not names.issubset(available[kind]) for kind,names in dependencies.items()):
+                    waiting.append(r);continue
+                payload={k:v for k,v in r.items() if k!='storage_location' and not (k=='comment' and not v)}
+                if name(r) in existing:
+                    actual={k:v for k,v in existing[name(r)].items() if k!='storage_location' and not (k=='comment' and not v)}
+                    if actual!=payload:raise ValueError('Restore conflict at tables/'+name(r))
+                else:self.uc.request('POST','tables',payload)
+                available['tables'].add(name(r));progress=True
+            if not progress:
+                self.state['unrestored'].extend({'kind':'tables','record':r,'reason':'SQL view dependency missing or cyclic; restore source tables/functions first'} for r in waiting)
+                break
+            deferred=waiting
         self.state['restoring'] = False
         self.state['dirty'] = False
         self.save()
@@ -231,8 +280,9 @@ class Registry:
                 self.state['unrestored'] = keep
                 for kind in FIELDS: live[kind] = definitions(live[kind], kind)
                 validate(live, self.bucket)
-                live['version']=2
-                if self.document is None or self.document.get('version')!=2 or fingerprint(live) != fingerprint(self.document):
+                # Use v3 once SQL views are exported; never downgrade a v3 registry.
+                live['version']=max(2,(self.document or {}).get('version',2),3 if any(r.get('table_type')=='VIEW' and r.get('view_definition') for r in live['tables']) else 2)
+                if self.document is None or self.document.get('version')!=live['version'] or fingerprint(live) != fingerprint(self.document):
                     live['updated_at'] = time.time()
                     body = json.dumps(live, ensure_ascii=False, sort_keys=True).encode()
                     if len(body) > MAX_BYTES: raise ValueError('Registry exceeds 16 MiB')
@@ -260,6 +310,6 @@ class Registry:
                 'nonportable': [{'kind': kind, 'name': name(r)} for kind in ('volumes', 'tables')
                     for r in (self.document or {}).get(kind, []) if (
                         kind == 'volumes' and r.get('volume_type') != 'EXTERNAL' or
-                        kind == 'tables' and (r.get('table_type') != 'EXTERNAL' or r.get('data_source_format') != 'DELTA'))],
+                        kind == 'tables' and not portable_table(r))],
                 'unrestored': [{'kind': x['kind'], 'name': name(x['record']), 'reason': x['reason']}
                                for x in self.state.get('unrestored', [])]}

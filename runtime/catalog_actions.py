@@ -24,7 +24,9 @@ def drop_tables(payload, lookup, execute):
         if stopped:
             results.append({'name':name,'status':'NOT_ATTEMPTED'});continue
         try:
-            lookup('GET','tables/'+quote(name,safe=''))
+            value=lookup('GET','tables/'+quote(name,safe=''))
+            if value and value.get('table_type') in ('VIEW','METRIC_VIEW','MATERIALIZED_VIEW'):
+                raise ValueError('Selected object is a view; use the view deletion action')
             catalog,schema,_=name.split('.')
             sql='DROP TABLE '+'.'.join('`'+p+'`' for p in name.split('.'))
             execute(sql,catalog=catalog,schema=schema)

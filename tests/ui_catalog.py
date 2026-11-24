@@ -14,7 +14,7 @@ def main():
     name='catalog-ui-'+uuid.uuid4().hex[:10]
     image=os.getenv('LAKEHOUSE_CATALOG_UI_IMAGE','r2-lakehouse-v3-runtime:local')
     def docker(*args):return subprocess.check_output(['docker',*args],text=True).strip()
-    tables=['one','two'];functions=[];deletes=[];creates=[];function_deletes=[]
+    tables=['one','two'];functions=[];deletes=[];creates=[];function_deletes=[];views=[];view_creates=[];view_deletes=[]
     try:
         docker('run','-d','--name',name,'-p','127.0.0.1::8888','-e','JUPYTER_TOKEN=fixture',
                image,'bash','/opt/lakehouse/start.sh','notebook')
@@ -25,11 +25,12 @@ def main():
         else:raise TimeoutError('Jupyter did not start')
         def api(route):
             url=urlparse(route.request.url);path=url.path.split('/lakehouse/api/')[1];q=parse_qs(url.query)
-            if path=='catalogs':value={'catalogs':[{'name':'alpha'},{'name':'sales'}]}
+            if path=='preferences':value={'timezone':'Asia/Ho_Chi_Minh'}
+            elif path=='catalogs':value={'catalogs':[{'name':'alpha'},{'name':'sales'}]}
             elif path=='schemas':value={'schemas':[{'name':'raw'},{'name':'clean'}]}
             elif path=='tables':
                 cat=q['catalog'][0];sch=q['schema'][0]
-                value={'tables':[{'name':n,'full_name':cat+'.'+sch+'.'+n,'table_type':'EXTERNAL','data_source_format':'DELTA'} for n in tables]}
+                value={'tables':[{'name':n,'full_name':cat+'.'+sch+'.'+n,'table_type':'EXTERNAL','data_source_format':'DELTA','table_id':'table-id-'+n,'created_at':1795478400000,'updated_at':1795482000000} for n in tables]+views}
             elif path=='volumes':value={'volumes':[]}
             elif path=='functions' and route.request.method=='GET':value={'functions':functions}
             elif path=='functions':
@@ -40,9 +41,16 @@ def main():
                    'input_params':{'parameters':[{'name':p['name'],'type_text':p['type'].lower()} for p in d['parameters']]}}
                 functions.append(f);value=f
             elif path=='function':value=next(f for f in functions if f['full_name']==q['name'][0])
+            elif path=='catalog':value={'name':'sales','id':'catalog-fixture-id','created_at':1795478400000,'owner':'analyst','storage_root':'s3://fixture/warehouse/sales'}
+            elif path=='schema':value={'name':'clean','schema_id':'schema-fixture-id','catalog_name':'sales','created_at':1795478400000}
+            elif path=='views':
+                d=route.request.post_data_json;view_creates.append(d)
+                value={'name':d['name'].split('.')[-1],'full_name':d['name'],'table_type':'VIEW','table_id':'view-fixture-id','created_at':1795478400000,'comment':d['comment'],'view_definition':d['sql'],'view_dependencies':{'dependencies':[]},'columns':[{'name':'answer','type_text':'int','nullable':False,'position':0}]};views.append(value)
+            elif path=='views/delete':
+                d=route.request.post_data_json;view_deletes.append(d);views.clear();value={'results':[{'name':n,'status':'DELETED'} for n in d['names']],'deleted':len(d['names'])}
             elif path=='functions/delete':
                 d=route.request.post_data_json;function_deletes.append(d);functions.clear();value={}
-            elif path=='table':value={'columns':[{'name':'id','type_text':'int'}],'table_type':'EXTERNAL','storage_location':'s3://fixture/one'}
+            elif path=='table':value=next((v for v in views if v['full_name']==q['name'][0]),{'columns':[{'name':'id','type_text':'int'}],'table_id':'table-fixture-id','created_at':1795478400000,'table_type':'EXTERNAL','storage_location':'s3://fixture/one'})
             elif path=='tables/delete':
                 d=route.request.post_data_json;deletes.append(d);results=[]
                 for index,full in enumerate(d['names']):
@@ -67,6 +75,9 @@ def main():
             panel.get_by_role('button',name='Copy full name',exact=True).first.click()
             panel.get_by_text('Copied: sales.clean.one',exact=True).wait_for()
             assert page.evaluate('navigator.clipboard.readText()')=='sales.clean.one'
+            panel.get_by_role('button',name='one',exact=True).click()
+            panel.locator('.lh-asset-properties').get_by_text('table-fixture-id',exact=True).wait_for()
+            assert 'Asia/Ho_Chi_Minh' in panel.inner_text()
             panel.get_by_role('button',name='Refresh',exact=True).click()
             panel.get_by_role('button',name='one',exact=True).wait_for()
             assert panel.get_by_label('Catalog',exact=True).input_value()=='sales'
@@ -107,9 +118,34 @@ def main():
             dialog.locator('input').fill('sales.clean.increment');dialog.locator('button').last.click()
             panel.get_by_text('Deleted function: sales.clean.increment',exact=True).wait_for()
             assert function_deletes==[{'name':'sales.clean.increment','confirmation':'sales.clean.increment'}]
+            panel.get_by_role('button',name='Catalog details',exact=True).click()
+            panel.locator('.lh-asset-properties').get_by_text('catalog-fixture-id',exact=True).wait_for()
+            panel.get_by_role('button',name='Schema details',exact=True).click()
+            panel.locator('.lh-asset-properties').get_by_text('schema-fixture-id',exact=True).wait_for()
+            panel.get_by_role('button',name='+ View',exact=True).click()
+            panel.get_by_label('View name',exact=True).fill('answer_view')
+            panel.get_by_label('View SELECT query',exact=True).fill('SELECT 42 AS answer')
+            panel.get_by_label('View description',exact=True).fill('A persistent SQL view')
+            panel.get_by_role('button',name='Create view',exact=True).click()
+            panel.get_by_role('heading',name='sales.clean.answer_view',exact=True).wait_for()
+            panel.locator('.lh-asset-properties').get_by_text('view-fixture-id',exact=True).wait_for()
+            panel.get_by_label('Asset type').select_option('views')
+            panel.get_by_label('Search catalog assets').fill('answer')
+            panel.get_by_role('button',name='Refresh',exact=True).click()
+            panel.get_by_role('button',name='answer_view',exact=True).wait_for()
+            assert panel.get_by_label('Asset type').input_value()=='views' and panel.get_by_label('Search catalog assets').input_value()=='answer'
+            assert view_creates[0]['name']=='sales.clean.answer_view'
+            panel.get_by_role('button',name='Copy definition',exact=True).click()
+            assert page.evaluate('window.readClipboard()')=='SELECT 42 AS answer'
+            if os.getenv('LAKEHOUSE_CATALOG_SCREENSHOT'):page.screenshot(path=os.environ['LAKEHOUSE_CATALOG_SCREENSHOT'],full_page=True)
+            panel.get_by_label('Select view sales.clean.answer_view',exact=True).check()
+            panel.get_by_role('button',name='Delete selected views',exact=True).click()
+            dialog.get_by_label('Type DELETE to confirm').fill('DELETE');dialog.get_by_role('button',name='Delete views',exact=True).click()
+            panel.get_by_text('No matching assets.',exact=True).wait_for()
+            assert view_deletes[0]['names']==['sales.clean.answer_view']
             assert not errors,errors
             browser.close()
-        print('PASS Catalog retained filters, copied full name, cancelled/partial/multiple deletes, registered/viewed/deleted function')
+        print('PASS Catalog filters, audit metadata/timezone, copy/delete, function and native-view UI contracts')
     finally:subprocess.run(['docker','rm','-f',name],capture_output=True)
 
 

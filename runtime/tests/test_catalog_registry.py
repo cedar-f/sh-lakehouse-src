@@ -43,6 +43,30 @@ def document():
                    'storage_location':'s3://fixture/external/orders','columns':[{'name':'id','type_text':'int','type_name':'INT','type_json':'"integer"','position':0}]}]}
 
 
+def view(view_name,source=None):
+    return {'name':view_name,'catalog_name':'sales','schema_name':'raw','table_type':'VIEW',
+            'view_definition':'SELECT 1 AS id' if not source else 'SELECT * FROM '+source,
+            'columns':[{'name':'id','type_text':'int','type_name':'INT','type_json':'"integer"','position':0}],
+            'view_dependencies':{'dependencies':[{'table':{'table_full_name':source}}] if source else []}}
+
+
+def test_views_upgrade_registry_and_replay_after_dependencies(tmp_path):
+    data=document();data['tables'] += [view('a_child','sales.raw.z_parent'),view('z_parent','sales.raw.orders')]
+    store=Store();r=engine(tmp_path/'source',store,UC(data));r.initialize()
+    assert json.loads(store.body)['version']==3
+    target=UC();restored=engine(tmp_path/'target',store,target);restored.initialize()
+    assert [name(p) for k,p in target.posts if k=='tables']==['sales.raw.orders','sales.raw.z_parent','sales.raw.a_child']
+    assert not restored.status()['unrestored'] and not restored.status()['nonportable']
+
+
+def test_view_with_missing_managed_dependency_is_preserved_as_unrestored(tmp_path):
+    data=document();data['tables'][0]['table_type']='MANAGED';data['tables'].append(view('read_orders','sales.raw.orders'))
+    store=Store(data);target=UC();r=engine(tmp_path,store,target);r.initialize()
+    assert len(r.status()['unrestored'])==2
+    assert not target.data['tables']
+    assert any(t.get('view_definition') for t in json.loads(store.body)['tables'])
+
+
 class UC:
     def __init__(self, data=None):
         self.data=copy.deepcopy(data) if data is not None else {'version':2,'bucket':'fixture',**{k:[] for k in ('catalogs','schemas','tables','volumes','functions')}}

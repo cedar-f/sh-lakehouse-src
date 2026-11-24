@@ -1,5 +1,5 @@
-pyspark==4.0.1
-delta-spark==4.3.1
+pyspark==4.2.0
+delta-spark==4.4.1
 jupyterlab==4.4.10
 jupyterlab-git==0.51.2
 jupyterhub==5.4.3

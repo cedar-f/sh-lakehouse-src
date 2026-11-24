@@ -9,7 +9,7 @@ Kiến trúc chi tiết, sequence và persistence: [ARCHITECTURE.md](ARCHITECTUR
 | Notebook | JupyterLab + extension Lakehouse; notebook Python/Spark, SQL cell | Code trong workspace |
 | Spark SQL | Spark Thrift/HiveServer2 cho SQL editor, dbt, ODBC | Đọc/ghi Delta trên R2 |
 | Runner | Chạy notebook/dbt/SQL nền, điều phối logic workflow | Run artifact và history trong lakehouse_data |
-| Unity Catalog OSS | Quản lý catalog/schema/table/volume | PostgreSQL |
+| Unity Catalog OSS | Quản lý catalog/schema/table/view/volume/function | PostgreSQL + portable registry R2 |
 | PostgreSQL | Database cho UC và Kestra | postgres_data |
 | Kestra | Schedule, execution và điều phối workflow | PostgreSQL, kestra_storage, kestra_tmp |
 | R2 | Dữ liệu Delta đang hoạt động, file incoming, snapshot backup | Bucket của bạn |
@@ -47,6 +47,8 @@ flowchart LR
 Ảnh minh họa bố cục UI. Tên sample/run trong ảnh không là dữ liệu bắt buộc của một workspace mới.
 
 ## Giới hạn cần hiểu
+
+Catalog có nhóm **Views**, tạo/preview/copy/delete view và xem SQL/dependency. Asset list/detail có Created, Updated và ID thật UC nếu API trả về; có Catalog details và Schema details. Files có Copy path cho file/folder/root và bảng metadata chi tiết. Xem [VIEWS](VIEWS.md), [FILES](FILES.md). R2 không trả ngày tạo gốc hay UUID độc lập cho prefix; UI ghi rõ khi thiếu thông tin.
 
 - Đây là project tự host, không phải Databricks Runtime hay bản sao đầy đủ Databricks Cloud.
 - Compute hiện là Spark local trong từng JVM/container. Notebook kernel, SQL service và notebook job nền có ngân sách RAM riêng; chưa có cluster phân tán hoặc autoscaling.

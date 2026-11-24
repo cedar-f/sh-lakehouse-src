@@ -22,9 +22,9 @@ def inside():
     root = Path('/tmp/dbt-fixture')
     root.mkdir()
     jars = []
-    for artifact in ('delta-spark_4.0_2.13', 'delta-storage'):
+    for artifact in ('delta-spark_4.2_2.13', 'delta-storage'):
         jar = root / (artifact + '.jar')
-        urllib.request.urlretrieve(f'https://repo.maven.apache.org/maven2/io/delta/{artifact}/4.3.1/{artifact}-4.3.1.jar', jar)
+        urllib.request.urlretrieve(f'https://repo.maven.apache.org/maven2/io/delta/{artifact}/4.4.1/{artifact}-4.4.1.jar', jar)
         jars.append(str(jar))
     spark_home = Path(pyspark.__file__).parent
     command = [str(spark_home / 'bin/spark-submit'), '--master', 'local[2]', '--driver-memory', '1g',

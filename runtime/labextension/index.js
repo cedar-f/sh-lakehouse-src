@@ -7,6 +7,7 @@ import { createHistory } from './history';
 import { createWorkflow } from './workflow';
 import { createGitHub } from './github';
 import { createCatalog } from './catalog';
+import { copyText, formatDate, properties, rawMetadata } from './assets';
 import './style.css';
 
 const el=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
@@ -44,6 +45,9 @@ export default {
         const bar=el('div','lh-toolbar'),prefix=el('input');prefix.value='incoming/';prefix.style.flex='1';prefix.setAttribute('aria-label','Upload folder');bar.append(el('span','lh-muted','Upload folder'),prefix,button('Refresh tree',()=>tree.refresh()),button('Collapse all',()=>tree.collapseAll()));root.append(bar);
         const drop=el('div','lh-drop','Drop files here, or click to select multiple files'),input=el('input');input.type='file';input.multiple=true;input.hidden=true;drop.append(input);root.append(drop);const queue=el('div'),listing=el('div');root.append(queue,listing);
         const deletion=el('div','lh-delete-status');deletion.setAttribute('aria-live','polite');root.append(deletion);
+        const metadataStatus=el('div','lh-status');metadataStatus.setAttribute('role','status');
+        const fileDetail=el('section','lh-run-detail lh-file-detail');fileDetail.hidden=true;root.append(metadataStatus,fileDetail);
+        const preferences=await api('preferences');let detailTicket=0;
         let running=Promise.resolve(),pendingUploads=0;
         const enqueue=files=>{
           if(tree.deleting){queue.append(el('div','lh-error','Wait for deletion to finish before uploading.'));return;}
@@ -54,8 +58,29 @@ export default {
           downloadUrl:key=>ServerConnection.makeSettings().baseUrl+'lakehouse/api/download?key='+encodeURIComponent(key),
           onSelect:path=>{prefix.value=path;},
           onDelete:remove,
+          timezone:preferences.timezone,
+          onError:error=>{metadataStatus.textContent=error.message;},
+          onCopy:({key,bucket})=>{if(!bucket)throw Error('Wait for the bucket listing');return copyText(root,'s3a://'+bucket+'/'+key,metadataStatus);},
+          onInspect:inspect,
         });
         listing.append(tree.node);
+        async function inspect({key,kind}){
+          const ticket=++detailTicket;fileDetail.hidden=false;fileDetail.replaceChildren(el('p','lh-muted','Loading metadata…'));
+          const value=await api('file?key='+encodeURIComponent(key)+'&kind='+kind).catch(error=>{if(ticket===detailTicket)fileDetail.replaceChildren(el('p','lh-error',error.message));throw error;});if(ticket!==detailTicket)return;
+          const actions=el('div','lh-toolbar');actions.append(button('Copy path',()=>copyText(root,value.spark_path,metadataStatus)),button('Copy object ID',()=>copyText(root,value.object_id,metadataStatus)),button('Close details',()=>{detailTicket++;fileDetail.hidden=true;}));
+          fileDetail.replaceChildren(el('h3','',key||value.bucket),actions);
+          properties(fileDetail,[['Type',value.virtual?'Virtual folder prefix':kind==='folder'?'Folder marker object':'File object'],['Bucket',value.bucket],['Spark path',value.spark_path],['S3 path',value.s3_path],['Object ID (bucket/key)',value.object_id],['ID source',value.object_id_kind],['Created',formatDate(value.created_at,preferences.timezone)],['Creation metadata',value.created_at_source],['Updated (Last-Modified)',formatDate(value.updated_at,preferences.timezone)],['Size',value.size===undefined?'Not calculated / not reported':Number(value.size).toLocaleString()+' bytes'],['Content type',value.content_type],['ETag',value.etag],['Storage class',value.storage_class],['Version ID',value.version_id]]);
+          if(value.note)fileDetail.append(el('p','lh-muted',value.note));
+          if(kind==='file'){
+            const download=el('a','lh-download-link','Download file');download.href=ServerConnection.makeSettings().baseUrl+'lakehouse/api/download?key='+encodeURIComponent(key);download.target='_blank';download.rel='noopener';fileDetail.append(download);
+            const extension=key.split('.').pop().toLowerCase();
+            if(['csv','json','parquet'].includes(extension)){
+              const code='df = spark.read'+(extension==='csv'?'.option("header", True)':'')+'.'+extension+'('+JSON.stringify(value.spark_path)+')\ndisplay(df.limit(20).toPandas())';
+              fileDetail.append(el('h3','','Read in notebook'),el('pre','lh-code',code),button('Copy read code',()=>copyText(root,code,metadataStatus)));
+            }
+          }
+          rawMetadata(fileDetail,value);
+        }
         prefix.onchange=()=>{prefix.value=prefix.value.trim().replace(/\/?$/,'/');tree.select(prefix.value);};
         input.onchange=()=>{enqueue(input.files);input.value='';};drop.onclick=e=>{if(e.target!==input&&!tree.deleting)input.click();};drop.ondragover=e=>{e.preventDefault();if(!tree.deleting)drop.classList.add('over');};drop.ondragleave=()=>drop.classList.remove('over');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');enqueue(e.dataTransfer.files);};
         async function remove(key,kind){

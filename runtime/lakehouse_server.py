@@ -78,14 +78,19 @@ class API(JupyterHandler):
                 result['authorization']={'enforced':False,'mode':'Single trusted workspace',
                     'note':'UC authorization is disabled. These are metadata, not per-user data access controls.'}
             elif path=='files':
-                prefix=self.get_argument('prefix','incoming/')
-                if prefix.startswith('/') or '..' in prefix.split('/'): raise ValueError('Invalid prefix')
-                args={'Bucket':os.environ['R2_BUCKET'],'Prefix':prefix,'Delimiter':'/','MaxKeys':200}
-                if self.get_argument('page_token',''): args['ContinuationToken']=self.get_argument('page_token')
-                response=await asyncio.to_thread(storage().list_objects_v2,**args)
-                result={'folders':[p['Prefix'] for p in response.get('CommonPrefixes',[])],
-                    'files':[{'key':p['Key'],'size':p['Size']} for p in response.get('Contents',[])],
-                    'next_page_token':response.get('NextContinuationToken'),'bucket':os.environ['R2_BUCKET']}
+                from file_metadata import list_files
+                result=await asyncio.to_thread(list_files,storage(),os.environ['R2_BUCKET'],
+                    self.get_argument('prefix','incoming/'),self.get_argument('page_token',''))
+            elif path=='file':
+                from file_metadata import object_detail
+                result=await asyncio.to_thread(object_detail,storage(),os.environ['R2_BUCKET'],
+                    self.get_argument('key',''),self.get_argument('kind','file'))
+            elif path in ('catalog','schema','volume'):
+                resource={'catalog':'catalogs','schema':'schemas','volume':'volumes'}[path]
+                parts=self.get_argument('name').split('.')
+                if len(parts)!={'catalog':1,'schema':2,'volume':3}[path]:raise ValueError('Invalid qualified name')
+                for part in parts:identifier(part)
+                result=await asyncio.to_thread(uc,'GET',resource+'/'+quote('.'.join(parts),safe=''))
             elif path=='download':
                 key=self.get_argument('key')
                 if key.startswith('/') or '..' in key.split('/'): raise ValueError('Invalid key')
@@ -150,7 +155,7 @@ class API(JupyterHandler):
                 name=full_name(data.get('name'))
                 if data.get('confirmation')!=name:raise ValueError('Confirm the full function name')
                 result=await asyncio.to_thread(uc,'DELETE','functions/'+quote(name,safe=''))
-            elif path=='tables/delete':result=await self.runner('POST',path,data)
+            elif path in ('tables/delete','views','views/delete'):result=await self.runner('POST',path,data)
             elif path.startswith('git/'):
                 result=await asyncio.to_thread(git_integration.action,path[4:],data,ROOT)
             elif path in ('catalogs','schemas'):

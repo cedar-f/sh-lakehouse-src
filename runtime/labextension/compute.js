@@ -56,7 +56,7 @@ export async function createCompute(root,{api,el,field,button}){
   function describe(r){cleanupStatus.textContent=`Retention: ${r.retention_days} days · quota: ${r.storage_max_gb} GB · history: ${r.history_retention_days} days\n${r.apply?'Removed':'Eligible'}: ${r.runs.length} runs, ${(r.bytes/1024/1024).toFixed(1)} MB · ${r.temporary.length} temporary directories`;}
   maintenance.append(button('Preview cleanup',async()=>describe(await api('maintenance'))),button('Clean eligible artifacts now',async()=>describe(await api('maintenance',{}))),cleanupStatus);root.append(maintenance);
   const registry=el('section','lh-card'),registryStatus=el('div','lh-status');
-  registry.append(el('h3','','Catalog registry on R2'),el('p','lh-muted','Portable catalog/schema definitions, comments, properties, external volumes, function definitions and table inventory. Check synchronization before resetting local metadata.'),registryStatus);
+  registry.append(el('h3','','Catalog registry on R2'),el('p','lh-muted','Portable catalog/schema definitions, comments, properties, external volumes, function definitions, SQL views and table inventory. Views are included in the tables count. Check synchronization before resetting local metadata.'),registryStatus);
   let registryZone='UTC';
   function showRegistry(r){
     registryStatus.replaceChildren();

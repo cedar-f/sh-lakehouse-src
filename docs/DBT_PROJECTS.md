@@ -2,6 +2,8 @@
 
 Project dbt là source của notebook/model/workflow trong repository workspace. Runner cấp kết nối Spark SQL Thrift; không đưa profiles.yml, credential R2 hoặc mật khẩu vào project.
 
+Native SQL views có thể được đọc bằng source/ref phù hợp catalog/session, nhưng UC connector chưa hỗ trợ replace/rename view. dbt-spark phát `CREATE OR REPLACE VIEW`, vì vậy không cam kết chạy lặp materialization `view` trên UC. Dùng Delta table/incremental cho model, tạo view một lần qua SQL khi cần; xem [VIEWS](VIEWS.md). Runner không tự DROP view hoặc thay macro materialization của project.
+
 ## Chọn chế độ cấu hình
 
 Khai báo `vars.lakehouse_catalog` ở cấp gốc của dbt_project.yml để bật **project mode**. Đây là quy ước của Lakehouse runner, không phải trường catalog native của dbt-spark. Giá trị phải là tên literal gồm chữ/số/underscore, bắt đầu bằng chữ/underscore; không hỗ trợ Jinja/env_var cho trường này. Mỗi project dùng một catalog, có thể có nhiều schema.

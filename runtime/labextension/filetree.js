@@ -1,3 +1,5 @@
+import { formatDate } from './assets';
+
 const element=(tag,className='',text='')=>{
   const node=document.createElement(tag);node.className=className;node.textContent=text;return node;
 };
@@ -11,8 +13,9 @@ function bytes(size){
 
 /** Lazy R2 prefix tree. Lists expanded folders only, with pagination per folder. */
 export class FileTree{
-  constructor({list,downloadUrl,onSelect,onDelete}){
+  constructor({list,downloadUrl,onSelect,onDelete,onCopy,onInspect,onError,timezone='UTC'}){
     this.list=list;this.downloadUrl=downloadUrl;this.onSelect=onSelect;this.onDelete=onDelete;this.deleting=false;
+    this.onCopy=onCopy;this.onInspect=onInspect;this.onError=onError;this.timezone=timezone;this.bucket='';
     this.folders=new Map();this.selected='incoming/';
     this.node=element('div','lh-file-tree');this.node.setAttribute('role','tree');
     this.node.setAttribute('aria-label','R2 file tree');
@@ -30,6 +33,7 @@ export class FileTree{
     item.row=element('div','lh-tree-row');item.arrow=element('span','lh-tree-arrow');
     item.arrow.setAttribute('aria-hidden','true');item.label=element('span','lh-tree-name',name);
     item.row.title=prefix||'Bucket root';item.row.append(item.arrow,item.label);
+    this.metadataButtons(item.row,prefix,'folder');
     this.deleteButton(item.row,prefix,'folder',parent);
     item.group=element('div','lh-tree-children');item.group.setAttribute('role','group');
     item.status=element('div','lh-tree-status lh-muted');item.status.setAttribute('role','status');
@@ -70,6 +74,15 @@ export class FileTree{
     for(const button of this.node.querySelectorAll('.lh-tree-delete'))button.disabled=value;
   }
 
+  metadataButtons(row,key,kind){
+    for(const [label,action] of [['Copy path',this.onCopy],['Details',this.onInspect]]){
+      if(!action)continue;
+      const b=element('button','lh-tree-action',label);b.type='button';b.setAttribute('aria-label',`${label} ${kind} ${key||'bucket root'}`);
+      b.onclick=async event=>{event.stopPropagation();try{await action({key,kind,bucket:this.bucket});}catch(error){if(this.onError)this.onError(error);}};
+      row.append(b);
+    }
+  }
+
   deleteButton(row,key,kind,parent){
     if(!this.onDelete||!key.startsWith('incoming/')||key==='incoming/')return;
     const button=element('button','lh-tree-delete','Delete');button.type='button';button.disabled=this.deleting;
@@ -107,7 +120,9 @@ export class FileTree{
     const row=element('div','lh-tree-row');row.append(element('span','lh-tree-arrow','·'));
     const link=element('a','lh-tree-name',file.key.slice(parent.prefix.length));
     link.href=this.downloadUrl(file.key);link.target='_blank';link.rel='noopener';link.title=file.key;link.tabIndex=-1;
-    row.append(link,element('span','lh-tree-size lh-muted',bytes(file.size)));
+    const updated=element('span','lh-tree-date lh-muted',formatDate(file.updated_at,this.timezone));updated.title='Updated (Last-Modified): '+formatDate(file.updated_at,this.timezone);
+    row.append(link,element('span','lh-tree-size lh-muted',bytes(file.size)),updated);
+    this.metadataButtons(row,file.key,'file');
     this.deleteButton(row,file.key,'file',parent);item.append(row);
     item.onkeydown=event=>{
       if(event.target!==item)return;
@@ -140,7 +155,7 @@ export class FileTree{
       try{
         const page=await this.list(item.prefix,reset?'':item.nextToken);
         if(reset)item.entries.clear();
-        if(item===this.root&&page.bucket){item.name=`r2://${page.bucket}`;item.label.textContent=item.name;this.update(item);}
+        if(item===this.root&&page.bucket){this.bucket=page.bucket;item.name=`r2://${page.bucket}`;item.label.textContent=item.name;this.update(item);}
         const prefixes=new Set(page.folders||[]);
         // Keep the platform's upload landing folder selectable even when empty.
         if(item===this.root&&reset)prefixes.add('incoming/');

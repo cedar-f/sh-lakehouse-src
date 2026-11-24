@@ -20,6 +20,7 @@ Workspace phân tích tự host bằng Docker: JupyterLab/Lakehouse extension, S
 - dbt project có thể tự khai báo catalog và schema theo model/nhóm, chạy nhiều schema qua source/ref; xem [DBT_PROJECTS](docs/DBT_PROJECTS.md).
 - UC chạy trên PostgreSQL; registry JSON trên R2 tự phục hồi catalog/schema rỗng, comment/properties/root, external assets và function definitions vào UC mới. Managed assets được giữ inventory và báo chưa phục hồi. Xem [CATALOG_REGISTRY](docs/CATALOG_REGISTRY.md).
 - SQL scalar functions tạo và gọi bằng tên ba phần trong notebook, SQL editor và workflow SQL; định nghĩa tự lưu UC/R2 và nạp lại sau Spark restart. Xem cú pháp/phạm vi tại [FUNCTIONS](docs/FUNCTIONS.md).
+- SQL views native UC có definition/dependency, preview/copy/delete và portable registry R2. Runtime dùng Spark 4.2/Delta 4.4; xem giới hạn replace/dbt và nâng cấp tại [VIEWS](docs/VIEWS.md), [VERSIONS](docs/VERSIONS.md). Files có copy file/folder path và metadata chi tiết theo [FILES](docs/FILES.md).
 - UC authorization tắt, SQL NOSASL; miền người dùng tin cậy. Public access theo [SECURITY](docs/SECURITY.md).
 - Snapshot script không nhân bản toàn bộ Delta data; cần data backup độc lập.
 - Phần chưa nghiệm thu/triển khai được ghi tại [REQUIREMENTS](docs/REQUIREMENTS.md).

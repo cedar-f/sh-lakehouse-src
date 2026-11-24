@@ -32,7 +32,11 @@ Các path sau tính từ `/lakehouse/api/`:
 | GET table | `name=catalog.schema.table` | Metadata + authorization.enforced=false |
 | POST catalogs | JSON name, optional comment | Tạo catalog rồi schema default |
 | POST schemas | JSON name, catalog_name, optional comment | Tạo schema |
-| GET files | prefix (default incoming/), optional page_token | folders, files[{key,size}], next_page_token, bucket; page tối đa 200 keys |
+| GET files | prefix (default incoming/), optional page_token | folders, files[{key,size,updated_at,etag,storage_class,bucket,kind,object_id,spark_path,s3_path,created_at,created_at_source}], next_page_token, bucket; page tối đa 200 keys |
+| GET file | key, kind=file hoặc folder | HEAD metadata + identity; folder prefix phải có / cuối, virtual folder không có dates/size riêng |
+| GET catalog / schema / volume | name=c / c.s / c.s.v | Native UC metadata namespace/volume, ID/audit/properties nếu có |
+| POST views | name=c.s.v, sql, optional comment | Native CREATE VIEW qua runner; trả UC table metadata với table_type=VIEW |
+| POST views/delete | names, confirmed_names, confirmation=DELETE | 1..100 exact full names; DROP VIEW với type guard, kết quả từng object và dừng khi lỗi |
 | GET download | key | Redirect URL R2 presigned 300 giây |
 | POST files/delete | key, kind, confirmation | deleted, has_more, errors[{key,code,message}] |
 | GET cluster | — | Saved Spark config, kernel IDs/paths/states, SQL status và restart snapshot |
@@ -43,6 +47,10 @@ Các path sau tính từ `/lakehouse/api/`:
 Identifiers catalog/schema/table theo pattern chữ/số/underscore, bắt đầu bằng chữ/underscore. Delete chỉ nhận exact file key hoặc prefix thư mục con dưới incoming/, confirmation phải bằng key. Không xóa root incoming, warehouse hoặc backup qua endpoint này. Folder phải có `/` cuối; mỗi request tối đa 1000 object, gọi tiếp cùng target khi has_more=true. Dừng khi có errors; không coi deleted là atomic transaction hoặc có undo. Multipart upload đang có ở target chặn xóa; không upload đồng thời từ phiên khác trong lúc xóa.
 
 ### Multipart upload
+
+File detail không suy ra Created từ Last-Modified. `object_id` là địa chỉ bucket/key, `object_id_kind` giải thích nguồn; ETag opaque. Folder marker metadata chỉ thuộc marker; HEAD 403 trả lỗi, không coi như prefix virtual. Không quét đệ quy hoặc HEAD từng key trong LIST. Xem [FILES](FILES.md).
+
+View collection dùng GET tables và lọc table_type=VIEW; không có endpoint UC `/views`. POST views chỉ nhận một SELECT/WITH tối đa 1 MiB và comment tối đa 20000 ký tự, tên mới; không thay thế table/view có sẵn. Views/delete phải có confirmed_names bằng đúng names theo thứ tự, không wildcard; kết quả DELETED/MISSING/FAILED/NOT_ATTEMPTED. Table delete từ chối mọi loại view. Runner private có cùng POST /views và /views/delete, bắt buộc X-Runner-Token. Không có transaction cả batch. Xem [VIEWS](VIEWS.md).
 
 | Method / path | Request | Response |
 |---|---|---|
@@ -176,7 +184,7 @@ Client bên ngoài nên dùng HTTPS URL hoặc tunnel. Synchronous runner POST /
 - POST /lakehouse/api/tables/delete bridge tới private runner cùng path. Payload {names:["c.s.t"],confirmed_names:["c.s.t"],confirmation:"DELETE"}; danh sách phải khớp thứ tự, 1..100 unique full names, chỉ identifier hợp lệ. Runner giữ job lock, lookup UC rồi DROP TABLE có quote từng phần và dùng schema của bảng cho connection.
 - Table batch trả results[{name,status,error?,note?}], deleted, stopped. Lỗi một thao tác dừng phần còn lại; không transaction toàn batch. 404 lookup là MISSING, không thực thi DROP. Lỗi sau gửi DDL có thể đã áp dụng, cần kiểm trước retry.
 
-Gateway yêu cầu Jupyter auth/XSRF; runner yêu cầu X-Runner-Token và không public. Function UC POST phải dùng wrapper function_info khi replay. Registry v2 giữ functions, v1 được nâng cấp conditional; xem [FUNCTIONS](FUNCTIONS.md) và [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
+Gateway yêu cầu Jupyter auth/XSRF; runner yêu cầu X-Runner-Token và không public. Function UC POST phải dùng wrapper function_info khi replay. Registry v2 giữ functions, v3 thêm native SQL view definition/dependency; nâng cấp conditional tại cùng key. Xem [FUNCTIONS](FUNCTIONS.md), [VIEWS](VIEWS.md) và [CATALOG_REGISTRY](CATALOG_REGISTRY.md).
 
 ### Managed SQL functions
 

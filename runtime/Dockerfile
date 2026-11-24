@@ -18,6 +18,10 @@ RUN useradd -m -u 1000 -s /bin/bash analyst \
  && mkdir -p /workspace /var/lib/lakehouse /opt/lakehouse /home/analyst/.ivy2 /home/analyst/.ssh \
  && chown -R analyst:analyst /workspace /var/lib/lakehouse /home/analyst
 COPY . /opt/lakehouse/
+RUN mkdir -p /tmp/lakehouse-resolver \
+ && javac -d /tmp/lakehouse-resolver /opt/lakehouse/ResolveSparkPackages.java \
+ && jar --create --file /opt/lakehouse/spark-package-resolver.jar -C /tmp/lakehouse-resolver . \
+ && rm -rf /tmp/lakehouse-resolver
 # Git checkouts under a restrictive host umask can contain root-only files.
 # Keep image code root-owned, but readable/traversable by the runtime user.
 RUN chmod -R a+rX /opt/lakehouse /usr/local/share/jupyter/labextensions/@lakehouse/workspace \

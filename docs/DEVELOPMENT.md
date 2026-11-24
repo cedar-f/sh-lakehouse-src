@@ -34,6 +34,9 @@
 | catalog_functions.py / catalog_actions.py / labextension/catalog.js | Function definition validation/UC request, confirmed DROP TABLE và Catalog filters/selection/copy/function UI |
 | sql_functions.py / function_sql_adapters.py / function_mutations.py | Tokenized SQL function DDL/call gateway, notebook/Thrift adapters, compare-and-replace và intent recovery |
 | file_deletion.py | Validate target/confirmation, active upload preflight, batch delete và partial errors |
+| file_metadata.py / labextension/assets.js | LIST/HEAD metadata có giới hạn, identity R2, clipboard và UC audit rendering |
+| view_actions.py | Native CREATE/DROP VIEW qua Spark, exact-name/type guards và batch status |
+| spark_dependencies.py / ResolveSparkPackages.java | Resolve Maven trước final JVM, khóa/cache marker và helper không tạo SparkContext |
 | labextension/index.js | Đăng ký sidebar/tab, API helper và các panel chính |
 | labextension/filetree.js / compute.js / workflow.js / history.js / style.css | Tree, restart UI, graph editor, history/detail và CSS |
 | runtime/tests / tests | Unit/regression; UI và Docker permission checks riêng |
@@ -80,10 +83,12 @@ Trong virtualenv riêng, cài `tests/requirements-ui.txt`, cài Chromium bằng 
 | `python tests/ui_git_setup.py` | Tạo/xóa container Docker riêng với repo bare local; kiểm GitHub wizard, key encrypted, native Git và restart. Không đọc .env hoặc gọi GitHub/R2. LAKEHOUSE_GIT_TEST_IMAGE chọn runtime image |
 | `python tests/registry_integration.py` | Docker UC/PostgreSQL riêng, xóa DB fixture và replay qua file-backed fake R2; không chạm env/volume/R2 production. Chọn image bằng LAKEHOUSE_REGISTRY_TEST_IMAGE/LAKEHOUSE_CATALOG_TEST_IMAGE |
 | `python tests/r2_env_config.py` | Compose interpolation/merges single-user và Hub với env fixture riêng; kiểm alias R2 → AWS, stale aliases và missing key. Không đọc .env thật, build/start container hoặc gọi R2 |
-| `python tests/sql_functions_integration.py` | UC/PostgreSQL + Spark notebook/Thrift + runner SQL/workflow riêng; kiểm CREATE/REPLACE/call/drop, Spark restart và UC reset/replay qua file-backed fake R2. Không đọc env/R2/volume production. LAKEHOUSE_FUNCTION_TEST_IMAGE và LAKEHOUSE_CATALOG_TEST_IMAGE chọn image; build runtime từ source hiện tại trước khi chạy |
-| `python tests/ui_catalog.py` | Container Jupyter/API fixtures riêng; kiểm filter retention, clipboard, cancel/partial multi-delete và function create/view/delete; không dùng env/R2. LAKEHOUSE_CATALOG_UI_IMAGE chọn image |
+| `python tests/sql_functions_integration.py` | UC/PostgreSQL + Spark notebook/Thrift + runner SQL/workflow riêng; kiểm scalar functions và native UC views/dependency/comment, Spark restart/cold cache và UC reset/replay v3 qua file-backed fake R2. Không đọc env/R2/volume production. LAKEHOUSE_FUNCTION_TEST_IMAGE và LAKEHOUSE_CATALOG_TEST_IMAGE chọn image; build runtime từ source hiện tại trước khi chạy |
+| `python tests/ui_catalog.py` | Container Jupyter/API fixtures riêng; kiểm filter retention, clipboard, cancel/partial multi-delete, function và native View UI cùng audit/namespace details; không dùng env/R2. LAKEHOUSE_CATALOG_UI_IMAGE chọn image |
+| `python tests/ui_file_metadata.py` | Jupyter/API fixtures riêng; lazy tree, copy file/folder path, clipboard fallback, HEAD/error recovery, metadata và timezone. LAKEHOUSE_FILES_TEST_IMAGE chọn image; không đọc env/R2 |
 | `python tests/ui_dbt_project.py` | Jupyter container riêng với API fixtures; kiểm project UI/Open Docs/legacy workflow, không đọc env/R2. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |
 | `python tests/dbt_project_integration.py` | Container Spark Thrift/Delta/dbt riêng với catalog local, kiểm source → schema a → schema b, tests và Docs; tải Maven jars, không dùng UC/R2/env production. LAKEHOUSE_DBT_TEST_IMAGE chọn runtime image |
+| `python tests/spark_storage_compatibility.py` | Full Maven set production với cache trống, Spark đọc CSV bằng S3A qua HTTP fixture S3 trong RAM, kiểm bind SQL args khi có Delta parser; không gọi R2/đọc env/volume production. LAKEHOUSE_STORAGE_TEST_IMAGE chọn runtime image |
 | `python tests/ui_registry.py` | Container Jupyter riêng và API fixtures; kiểm counts/unrestored/pending/manual sync/disabled và TZ của Compute, không đọc env/R2 |
 | `bash scripts/check.sh` | Smoke test có ghi Delta table thật; cần kế hoạch dọn table thử |
 | `bash scripts/check-notebook.sh notebooks/my_job.ipynb` | Thực thi notebook thật và mọi side effect trong notebook |

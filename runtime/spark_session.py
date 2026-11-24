@@ -4,8 +4,11 @@ def create_spark():
     import os
     os.environ['PYSPARK_SUBMIT_ARGS']='--driver-memory '+settings()['driver_memory']+' pyspark-shell'
     from pyspark.sql import SparkSession
+    conf=spark_conf()
+    from spark_dependencies import prepare
+    prepare(conf)
     builder = SparkSession.builder.appName('Lakehouse V3')
-    for key,value in spark_conf().items(): builder = builder.config(key,value)
+    for key,value in conf.items(): builder = builder.config(key,value)
     spark = builder.getOrCreate()
     spark.sql('USE SCHEMA `'+settings()['default_schema']+'`')
     from function_sql_adapters import install

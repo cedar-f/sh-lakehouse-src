@@ -122,8 +122,8 @@ Khi UC mới trống: phục hồi catalogs → schemas → external volumes/tab
 
 ## Nâng cấp và API
 
-Code đọc manifest v1/v2. v1 chưa có functions được hiểu là danh sách rỗng; khi sync, manifest được ghi v2 bằng conditional PUT tại cùng key. Không đổi UC_REGISTRY_PREFIX, reset PostgreSQL hoặc sửa current.json bằng tay. Code cũ chỉ đọc v1 sẽ từ chối v2; rollback theo [DISASTER_RECOVERY](DISASTER_RECOVERY.md), không ép version về 1.
+Code đọc manifest v1/v2/v3. v1 chưa có functions được hiểu là danh sách rỗng; sync dùng ít nhất v2 và nâng v3 khi có SQL view definitions. Không đổi UC_REGISTRY_PREFIX, reset PostgreSQL hoặc sửa current.json bằng tay. Code cũ từ chối version chưa hỗ trợ; rollback theo [DISASTER_RECOVERY](DISASTER_RECOVERY.md), không ép version bằng tay. View portable theo [VIEWS](VIEWS.md).
 
 Nâng cấp bằng Git và rebuild theo [OPERATIONS](OPERATIONS.md); restart notebook kernel để nạp wrapper `spark.sql` mới. Không cần reset data/metadata. Kiểm registry healthy và thử một CREATE/SELECT trong namespace sandbox trước khi áp dụng cho job thật.
 
-Gateway function metadata và endpoint private compare-and-replace được mô tả tại [API](API.md). Gọi native UC qua UC_URL registry proxy để có acknowledgement R2. Không publish runner/registry hoặc bypass trực tiếp backend. Tham khảo [Spark 4.0.1 SQL function](https://spark.apache.org/docs/4.0.1/sql-ref-syntax-ddl-create-sql-function.html) và [UC API v0.7.0](https://raw.githubusercontent.com/unitycatalog/unitycatalog/v0.7.0/api/all.yaml).
+Gateway function metadata và endpoint private compare-and-replace được mô tả tại [API](API.md). Gọi native UC qua UC_URL registry proxy để có acknowledgement R2. Không publish runner/registry hoặc bypass trực tiếp backend. Tham khảo [Spark SQL functions](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-create-sql-function.html) và [UC API v0.7.0](https://raw.githubusercontent.com/unitycatalog/unitycatalog/v0.7.0/api/all.yaml).
